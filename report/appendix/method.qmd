@@ -57,6 +57,49 @@ Select Star は `llms.txt`、`changelog.md`、`features/semantic-models.md`、
 
 いずれもアクセス日は 2026-07-19。
 
+### Superset SIP-182 の確認手段 {#sec-method-superset}
+
+Superset については「マージ済みだが未リリース」「OSI 対応ではない」という
+2つの判断をしている。根拠は以下のとおり。
+
+**マージ済みであること**
+
+- [Issue #35003（SIP-182）](https://github.com/apache/superset/issues/35003) が
+  2026-06-22 に `completed` としてクローズされている
+- 関連 PR 約26本（`#37815` セマンティック層拡張、`#37816` モデル/DAO、
+  `#37817` Explore 統合、`#38370` API、`#38376` UI、`#40475` ダッシュボードフィルタ、
+  最終は `#42093`、2026-07-15）が `master` にマージ済み
+
+**未リリースであること**
+
+- `superset/semantic_layers/` が **6.2 リリースブランチに存在しない**
+  （GitHub API でパスを問い合わせて 404）
+- アプリの最新タグは `6.1.0`（2026-05-01）で、その `config.py` に
+  `SEMANTIC_LAYERS` フラグが存在しない
+- `master` の `superset/config.py` では
+  `"SEMANTIC_LAYERS": False` に `# @lifecycle: development` の注記が付く
+- `CHANGELOG/6.1.0.md` にセマンティック層関連の項目がない
+
+**OSI 対応ではないこと**
+
+- `apache/superset` に対する `ossie` / `open semantic interchange` の
+  コード検索がいずれも 0 件
+- OSI の語は散文中に1度、セマンティック層の一例として名前が挙がるのみ
+- `apache/ossie` の `converters/` に Superset 向けのものがなく、
+  Superset に言及する Issue もない
+
+**Preset（Superset の商用提供元）の表明**
+
+- [パートナーページ](https://preset.io/partners/open-semantic-interchange/)に
+  "We're working to ensure Preset and Apache Superset™ can both export and import
+  semantic definitions in the OSI format."（Preset と Apache Superset の双方が
+  OSI 形式でセマンティック定義を export / import できるよう取り組んでいる）とある。
+  未来形で、日付の記載はない
+- [Preset のセマンティック層ドキュメント](https://docs.preset.io/v1/docs/semantic-layer)は
+  自社のデータセットとメトリクスを説明しており、OSI への言及はない
+
+いずれもアクセス日 2026-07-19。和訳は筆者による。
+
 ### リポジトリ側の確認
 
 `apache/ossie` について次を確認した。

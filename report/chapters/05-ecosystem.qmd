@@ -57,9 +57,13 @@ NDA 下のプライベートプレビューは公開情報に現れない。
 
 - **Snowflake**: semantic views が実際に出荷している入出力は
   独自 YAML と Tableau TDS（Preview、2026-03-05）であって、OSI ではない[^sf]
-- **Databricks**: metric views のドキュメントと YAML リファレンスに OSI の記載なし[^dbx]
+- **Databricks**: 製品ドキュメント（metric views と YAML リファレンス）に OSI の記載はない[^dbx]。
+  一方、Data + AI Summit 2026 に合わせた自社ブログでは
+  metric views を "Open Semantic Interchange (OSI) ready"（OSI 対応の準備ができている）
+  と述べている[^dbx-summit]。**何をもって ready とするかは示されておらず**、
+  import / export の手順は文書化されていない
 - **Dremio**: Dremio Cloud の changelog（2025-11-12 〜 2026-07-14 の範囲）に該当なし。
-  自社ブログで Ossie に言及しているのみ。5社の中で最も実体が薄い[^dremio]
+  製品側の記載は確認できず、自社ブログで Ossie に言及するにとどまる[^dremio]
 - **Cube**: ブログで「オープンアダプタを提供する」と表明してから約10か月経つが、
   製品ドキュメントにも Ossie リポジトリにも成果物が見当たらない[^cube]
 - **Salesforce / Tableau**: Ossie リポジトリに双方向変換器が存在するが、
@@ -67,11 +71,12 @@ NDA 下のプライベートプレビューは公開情報に現れない。
 
 [^sf]: [semantic views overview](https://docs.snowflake.com/en/user-guide/views-semantic/overview) / [Tableau TDS 対応の release note（2026-03-05）](https://docs.snowflake.com/en/release-notes/2026/other/2026-03-05-semantic-views-tableau-tds)、アクセス日 2026-07-19
 [^dbx]: [metric views](https://docs.databricks.com/aws/en/business-semantics/metric-views) / [YAML reference](https://docs.databricks.com/aws/en/business-semantics/metric-views/yaml-reference)、アクセス日 2026-07-19
+[^dbx-summit]: Databricks, "[What's new with Unity Catalog at Data + AI Summit 2026](https://www.databricks.com/blog/whats-new-unity-catalog-data-ai-summit-2026)", アクセス日 2026-07-20。原文は "Metrics is also open: it's open source, available in Apache Spark and Unity Catalog OSS, and its Open Semantic Interchange (OSI) ready."。和訳は筆者による
 [^dremio]: [Dremio Cloud changelog](https://docs.dremio.com/dremio-cloud/changelog/) / [Dremio ブログ](https://www.dremio.com/blog/apache-ossie-incubating-the-new-name-for-open-semantic-interchange/)、アクセス日 2026-07-19
 [^cube]: [Cube: semantic layer sync](https://docs.cube.dev/docs/integrations/semantic-layer-sync)、アクセス日 2026-07-19
 [^sfdc]: [converters/salesforce](https://github.com/apache/ossie/tree/main/converters/salesforce)、アクセス日 2026-07-19
 
-## カタログ製品3社も表明のみ
+## カタログ製品3社の状況
 
 Atlan・Alation・Select Star はいずれもローンチパートナーとして名を連ねているが、
 **いずれも動く実装を確認できなかった**。
@@ -81,9 +86,9 @@ Atlan・Alation・Select Star はいずれもローンチパートナーとし�
 検索語 `osi` / `ossie` / `open semantic interchange` に対するヒットは3社とも実質0件で、
 `apache/ossie` のコミット履歴にも3社のドメインからの貢献は存在しない。
 
-### 実際に出荷しているのは Snowflake への個別対応
+### 出荷されている機能は Snowflake 固有形式に対応するもの
 
-3社が実際に出荷しているものを見ると、構図がはっきりする。
+3社が現に提供している機能を見ると、対応先が揃っている。
 
 - **Atlan**: Context Engineering Studio（Private Preview）。
   独自形式を各ターゲットへ射影する設計で、Snowflake へのデプロイ先は
@@ -97,28 +102,40 @@ Atlan・Alation・Select Star はいずれもローンチパートナーとし�
 [^alation-rel]: Alation の2026年リリースノート（`docs.alation.com/en/latest/releases/releasenotes/`）より。詳細は @sec-note-alation-selectstar
 [^ss-docs]: Select Star, "[Semantic Models](https://docs.selectstar.com/)" のドキュメント全文より。詳細は @sec-note-alation-selectstar
 
-**現時点のカタログ製品にとって、相互運用の実体は
-「ベンダー中立標準への対応」ではなく「Snowflake への個別対応」である。**
+3社とも、接続先は Snowflake の semantic view または Cortex Analyst であり、
+ベンダー中立の交換形式を介してはいない。
 
-Ossie が解こうとしている問題が、まさに現場でまだ解かれていないことの傍証になる。
+これは各社の姿勢というより、**市場の順序として理解できる**。
+Snowflake は semantic view を実際に出荷しており、
+そこに接続すれば顧客の需要に今すぐ応えられる。
+一方 Ossie は @sec-situation で見たとおりリリース版すら固まっておらず、
+対応先として選びにくい。実装が2件にとどまっている理由も同じところにある。
 
-### ベンダーの温度感
+裏を返せば、**Ossie が解こうとしている「ツールをまたぐ相互運用」は、
+現場ではまだ個別対応で埋められている**という状況が読み取れる。
 
-表現には幅がある。Select Star は自社ブログで、これからの話であることが
-分かる書き方をしている[^ss-blog]。
+### 発信の時制には幅がある
+
+各社の発信を並べると、OSI をどの時点の話として語るかに違いがある。
+
+Select Star は自社ブログで将来形を使う[^ss-blog]。
 
 > so they can travel across tools **as OSI matures**
 >
 > （OSI が成熟するにつれて、それらがツール間を行き来できるように）
 
-一方 Atlan の解説記事は現在形で述べる[^atlan-seo]。
+Atlan の解説記事は現在形である[^atlan-seo]。
 
 > This portability is backed by the Open Semantic Interchange (OSI) standard
 >
 > （この可搬性は Open Semantic Interchange (OSI) 標準に支えられている）
 
-同社の製品ドキュメントには OSI の記載を確認できなかったので、
-この記事だけを見ると出荷済みと受け取りかねない。
+Databricks の Summit ブログの "OSI ready" も、
+準備状態を指すのか出荷済みの機能を指すのか、文面からは判別できない。
+
+**標準への賛同・準備・実装は、それぞれ別の段階である。**
+発信の場（解説記事・イベント登壇・製品ドキュメント）によって
+どの段階を語っているかが変わるため、読み分けが要る。
 
 [^ss-blog]: Select Star, "[Snowflake AI-Ready Semantic Model](https://www.selectstar.com/resources/snowflake-ai-ready-semantic-model)", アクセス日 2026-07-19。和訳は筆者による
 [^atlan-seo]: Atlan, "[Context Catalog](https://atlan.com/know/context-catalog/)", アクセス日 2026-07-19。製品ドキュメントではなく解説記事。和訳は筆者による
@@ -144,18 +161,23 @@ Apache Superset の SIP-182「Semantic Layer Support」は
 
 [^sip182]: apache/superset, "[[SIP-182] Semantic Layer Support in Apache Superset](https://github.com/apache/superset/issues/35003)", アクセス日 2026-07-19
 
-しかし2点注意が要る。
+ただし2点、注意が要る（確認手段は @sec-method-superset）。
 
 - **未リリース**。`superset/semantic_layers/` は 6.2 リリースブランチに存在せず、
   master 上のフラグは `"SEMANTIC_LAYERS": False`（`# @lifecycle: development`）
-- **そもそも OSI 対応ではない**。`apache/superset` を検索しても
-  `ossie` / `open semantic interchange` は 0件。
-  `apache/ossie` に Superset コンバータもない
+- **OSI 対応ではない**。`apache/superset` を検索しても
+  `ossie` / `open semantic interchange` は 0件で、
+  `apache/ossie` 側にも Superset コンバータはない。
+  SIP-182 はセマンティック層一般の基盤であって、OSI の実装ではない
 
 Preset は「Preset と Superset の双方で OSI 形式の export / import を
 できるようにする作業を進めている」と表明しているが、未来形で日付もない。
 
-## 比較対象としての Unity Catalog {#sec-uc-comparison}
+## 意味をどこに置くか — Unity Catalog との対比 {#sec-uc-comparison}
+
+**セマンティック層をどこに実装するかについて、2つの異なる賭け方が並走している。**
+一方は自社カタログの内側に作り込み、他方は中立仕様を格納する器として作る。
+前者は既に GA し、後者はまだ動いていない。
 
 Databricks の Unity Catalog Business Semantics は **2026-04-02 に GA** している。
 
@@ -166,18 +188,13 @@ Databricks の Unity Catalog Business Semantics は **2026-04-02 に GA** して
 [^dbx-blog]: Databricks, "[Redefining Semantics: The Data Layer for the Future of BI and AI](https://www.databricks.com/blog/redefining-semantics-data-layer-future-bi-and-ai)", アクセス日 2026-07-19
 [^uc-pr]: unitycatalog/unitycatalog, "[PR #1493: Add METRIC_VIEW table type](https://github.com/unitycatalog/unitycatalog/pull/1493)", アクセス日 2026-07-19
 
-::: {.callout-important}
-## これは Ossie の競合ではない — 層が違う
+比較にあたって前提を2つ置く。
+Ossie は**ツール間でモデルを受け渡す交換フォーマット**、
+Unity Catalog Business Semantics は**単一ベンダーのセマンティック層の実装**であり、
+層が異なる。また Databricks は Ossie の参加企業でもあり、実際に貢献している。
+競合として並べるのではなく、**設計上の選択が分かれた事例**として見る。
 
-Ossie は**ツール間でセマンティックモデルを受け渡すための交換フォーマット**である。
-Unity Catalog Business Semantics は**単一ベンダーのセマンティック層の実装**である。
-同じ土俵の製品ではない。
-
-さらに **Databricks は Ossie の参加企業でもあり、実際に貢献している**。
-対立構図として描くのは正確ではない。
-:::
-
-では何を比べているのか。**「意味をどこに置くか」という設計の賭け方**である。
+違いは、意味の定義をどこに置くかにある。
 
 | | Unity Catalog | Polaris + Ossie |
 | --- | --- | --- |
@@ -198,10 +215,6 @@ Ossie が @sec-situation で見たとおりリリース版すら確定してい�
 そのうえで問うべきは、中立性のために払った速度のコストに見合うだけの
 中立性が実際に得られているかである。
 判断材料は @sec-governance と @sec-verification にある。
-
-なお Apache Gravitino には OSI / セマンティック層の実装が確認できなかった。
-「Gravitino 上に OSI モデルのレジストリを作る」という趣旨のベンダー記述を
-検索結果で見かけたが、一次情報で裏が取れていない。
 
 ## カタログ統合はまだ動かない
 
@@ -274,3 +287,12 @@ Polaris の `EntityVersion` は**楽観的並行制御用の不透明文字列**
 Ossie の Champion である JB Onofré は Polaris の中心人物でもあり、
 Mentor の Russell Spitzer は Iceberg の中心人物である。
 カタログ統合が優先課題に上がっている背景には、この人的配置がある。
+
+### 他のカタログ製品
+
+Apache Gravitino については、OSI / セマンティック層の実装を確認できなかった。
+リポジトリの Issue / PR を OSI 関連の語で検索した結果はゼロである。
+「Gravitino 上に OSI モデルのレジストリを作る」という趣旨のベンダー記述を
+検索結果で見かけたが、一次情報で裏が取れなかった。
+
+Unity Catalog については @sec-uc-comparison で扱う。
