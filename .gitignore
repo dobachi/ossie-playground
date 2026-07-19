@@ -1,0 +1,10 @@
+spec/
+docs/results/
+track-a/dbt-project/target/
+track-a/dbt-project/logs/
+track-a/dbt-project/OSI/
+track-a/dbt-project/*.duckdb
+track-b/generated/
+__pycache__/
+*.pyc
+.user.yml

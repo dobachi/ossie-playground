@@ -1,0 +1,17 @@
+# 消費側実装（出荷版）
+dbt-core==1.12.0
+dbt-duckdb==1.10.1
+
+# 仕様リポジトリのバリデータ validation/validate.py が要求するもの
+# （PEP 723 のインラインメタデータに記載されているバージョン）
+jsonschema>=4.26.0
+sqlglot>=30.12.0
+
+# 検証スクリプト用
+PyYAML>=6.0
+
+# トラックB で spec/python (apache-ossie) と spec/converters/dbt (ossie_dbt) を
+# ソースから導入するために必要。両者とも PyPI 未公開のため。
+# ネットワーク遮断下で --no-deps 導入できるよう、ビルドバックエンドを先に入れておく。
+hatchling>=1.25
+jinja2>=3.0

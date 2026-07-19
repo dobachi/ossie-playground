@@ -1,0 +1,7 @@
+ossie_track_a:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: ossie_track_a.duckdb
+      schema: main

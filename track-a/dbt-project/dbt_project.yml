@@ -1,0 +1,10 @@
+name: ossie_track_a
+version: "1.0.0"
+profile: ossie_track_a
+
+model-paths: ["models"]
+osi-paths: ["OSI"]
+
+models:
+  ossie_track_a:
+    +materialized: table

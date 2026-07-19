@@ -1,0 +1,16 @@
+services:
+  lab:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: ossie-playground:local
+    working_dir: /work
+    volumes:
+      # 作業ツリーをマウントする。生成物はホスト側に残るが、
+      # 実行環境（Python・dbt・依存）はコンテナ内に閉じている。
+      - .:/work
+    # 検証中に外部へ出ないことを担保する。
+    # 仕様リポジトリの取得だけは事前に make spec で行う。
+    network_mode: none
+    stdin_open: true
+    tty: true
