@@ -1,6 +1,4 @@
----
-title: "仕様の基礎（一次読解）"
----
+# 仕様の基礎（一次読解） {#sec-note-spec-foundation}
 
 `core-spec/spec.md` を通読した結果。**動作確認のソースはこの文書とする。**
 

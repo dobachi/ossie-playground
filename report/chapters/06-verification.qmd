@@ -1,0 +1,256 @@
+# 動作確認 {#sec-verification}
+
+ここまでは文書の読解である。本章は実際に動かした結果を扱う。
+
+本章の観測はすべて再現可能である。検証スクリプトと実行環境は
+[ossie-playground](https://github.com/dobachi/ossie-playground) のルートにあり、
+`make verify` で追試できる（@sec-reproduce）。
+実行結果の生データは `docs/results/track_a.json` / `track_b.json` に出力される。
+検証項目ごとの主張と反証条件は @sec-note-verification-plan、
+詳細な観測記録は @sec-note-verification-results にある。
+
+## 検証の設計
+
+### なぜ2トラックに分けたか
+
+@sec-situation で述べたとおり、0.1.1 と 0.2.0.dev0 は
+**揃っているツールチェーンが異なる**。同じ手順を両方に適用することはできない。
+
+| | 0.1.1 | 0.2.0.dev0 |
+| --- | --- | --- |
+| 公式スキーマ | あり（タグ `osi-0.1.1-rc1`） | あり（`main`） |
+| 公式サンプル | **なし** | 2本 |
+| `converters/` 8本 | 対象外 | **全8本がこちら** |
+| 出荷版 dbt Core 1.12 | **受理** | 拒否 |
+
+そこで2つの経路をそれぞれ別に検証した。
+
+**トラックA（0.1.1）** — 手書きの準拠文書 → 公式バリデータ → dbt 取り込み → `dbt run`。
+端から端まで通せる唯一の経路。公式サンプルが存在しないため入力は自作せざるを得ない。
+
+**トラックB（0.2.0.dev0）** — 公式コンバータで dbt から生成 → 公式バリデータ → dbt 取り込み。
+生成側の経路。
+
+### 運用ルール
+
+@sec-note-verification-plan に検証計画を先に固定し、
+各項目について**主張・手順・裏付けとなる観測・反証となる観測**を事前に書いた。
+
+特に重要なルールが1つある。
+**投入する文書はすべて公式バリデータを通してから実装に食わせる。**
+
+仕様に適合しない文書を実装に読ませると、実装がそれをどう扱おうと
+「実装の性質」としては解釈できない。仕様準拠を先に保証しておかないと、
+観測されたものが仕様由来か実装由来かを切り分けられなくなる。
+
+### 環境
+
+| 項目 | 値 |
+| --- | --- |
+| 仕様 | `apache/ossie` @ `07be0176` / 比較タグ `osi-0.1.1-rc1` |
+| 消費側 | dbt Core 1.12.0 / dbt-duckdb 1.10.1 / metricflow 0.211.0 |
+| 実行環境 | `python:3.12-slim` コンテナ |
+
+すべて Docker 上で動かし、ホストには何も入れていない。
+必要なのは docker だけである。再現手順は @sec-reproduce。
+
+::: {.callout-note}
+## 検証中は外部ネットワークから切り離している
+
+検証を走らせるコンテナは、Docker の設定（`network_mode: none`）で
+**外部と通信できない状態にしてある**。実行中にパッケージを取りに行ったり、
+仕様リポジトリを引き直したりできない。
+
+理由は結果の再現性である。実行のたびに外部から何かを取得していると、
+**上流が変わった瞬間に結果が変わり、しかもそれに気づけない**。
+通信を断てば、結果を左右するのは
+固定したコミット（`07be0176`）とコンテナイメージだけになる。
+
+外部を使うのは事前準備の一度だけで、仕様リポジトリを
+固定コミットで取得する `make spec` がそれにあたる。
+以降の `make verify` は取得済みのものだけを見る。
+
+副次的な効果として、dbt が起動時に最新版を確認しようとして失敗する
+（`The latest version of dbt-core could not be determined!`）。
+これは切り離しが効いていることの確認にもなる。
+:::
+
+## 結果の概要
+
+| 項目 | 結果 |
+| --- | --- |
+| V1 バージョン文字列の排他性 | 裏付け。ただし別要因も同時に判明 |
+| V2 dbt は公式スキーマより緩いか | 裏付け |
+| V3 型情報のないディメンション | 裏付け |
+| V4 メトリクス集約式の写像 | 集約関数が脱落。ただし**実行検証は不能** |
+| V5 仕様外の前提 | 裏付け（3件） |
+| V6 公式コンバータ出力の受理 | 裏付け。加えて**想定外の破綻2件** |
+
+## dbt を挟んだ往復が成立しない {#sec-verification-roundtrip}
+
+本章で最も紙幅を割く結果である。
+
+仕様リポジトリ同梱の公式コンバータ（`ossie-dbt msi-to-osi`）で
+dbt プロジェクトから OSI 文書を生成し、同じ dbt に戻せるかを試した。
+
+![往復の破綻](../diagrams/02-roundtrip-failure.png){#fig-roundtrip}
+
+**独立した3つの理由で失敗する。**
+
+### 破綻1: 公式コンバータの出力が、同一コミットの公式スキーマで落ちる
+
+```
+[Schema] (root): Additional properties are not allowed ('dialects' was unexpected)
+```
+
+コンバータはルート直下に `dialects: ["ANSI_SQL"]` を出力する。
+これは **0.1.1 のルート構造**であり、0.2.0.dev0 では削除されている（@sec-spec-diff）。
+
+にもかかわらずコンバータは `version: "0.2.0.dev0"` を出力する
+（[`converters/dbt/src/ossie_dbt/msi_to_osi.py` L124](https://github.com/apache/ossie/blob/07be0176e48af67f0b46e0957a87a154586abf38/converters/dbt/src/ossie_dbt/msi_to_osi.py#L124) のハードコード。
+[`tests/test_msi_to_osi.py`](https://github.com/apache/ossie/blob/07be0176e48af67f0b46e0957a87a154586abf38/converters/dbt/tests/test_msi_to_osi.py) でもこの値がアサートされている）。
+
+**コンバータは、0.1.1 時代の構造に 0.2.0.dev0 のラベルを貼っている。**
+自己矛盾した成果物であり、同一コミットの公式バリデータを通らない。
+
+### 破綻2: バージョン文字列で拒否される
+
+```
+OSI file '...' uses unsupported version '0.2.0.dev0'.
+Supported versions: ['0.1.0', '0.1.1']
+```
+
+dbt 側の受理集合は、インストールされた `dbt/constants.py` に
+`SUPPORTED_OSI_VERSIONS = frozenset({"0.1.0", "0.1.1"})` として定義されている
+（dbt-core 1.12.0。検証環境内で確認）。
+この制約は [dbt のドキュメント](https://docs.getdbt.com/docs/build/osi-semantic-models)にも
+"OSI documents must use version `0.1.0` or `0.1.1`"
+（OSI 文書はバージョン 0.1.0 または 0.1.1 を用いなければならない）と明記されている。
+
+### 破綻3: `source` の形式が一致しない
+
+バージョンを `0.1.1` に書き換えると 0.1.1 スキーマは通過する。
+しかし dbt はなお拒否する。
+
+```
+contains dataset 'orders' ("ossie_track_a"."main"."orders") that does not match
+any dbt model in this project.
+```
+
+コンバータは `source` を `'"db"."schema"."table"'` と**識別子をクォートして**出力する。
+dbt の突き合わせはクォートなしを期待する。
+手書きの `ossie_track_a.main.orders` は問題なく通った。
+
+仕様は `source` を「`database.schema.table` 形式または query」としか定めておらず、
+**クォートの扱いを規定していない**（@sec-spec）。
+
+### 帰結
+
+**dbt → OSI → dbt の往復が成立しない。**
+しかも3つの理由が独立に成立するため、どれか1つを直しても通らない。
+
+::: {.callout-important}
+## 障害の性質
+
+重要なのは、これらが**メトリクス意味論の難しさに由来していない**ことである。
+
+バージョン管理・出力形式・識別子表記といった、地味な規約の未整備である。
+概念的相互運用という難問に取り組む以前に、事務的な部分で詰まっている。
+:::
+
+## 取り込み時に情報が落ちる {#sec-verification-loss}
+
+手書きの 0.1.1 準拠文書は、公式バリデータを通り、dbt に取り込まれ、
+`dbt run` まで到達した。**経路がまったく動かないわけではない。**
+
+ただし取り込みの過程で情報が落ちる。
+
+![取り込み時の情報欠落](../diagrams/03-semantic-loss.png){#fig-loss}
+
+### 型情報が運ばれない
+
+OSI の `dimension` は `is_time` しか持たない（@sec-spec）。結果として次のようになる。
+
+| OSI 側の宣言 | dbt での分類 |
+| --- | --- |
+| `order_id`（primary_key） | entity (primary) |
+| `status`（文字列カラム、is_time=false） | dimension: **categorical** |
+| `amount`（数値カラム、is_time=false） | dimension: **categorical** |
+| `ordered_at`（is_time=true） | dimension: time |
+
+**数値と文字列が区別されない。**
+dbt は `source` から物理テーブルに到達できるが、型を見に行って補正はしていない。
+
+### 集約関数が脱落する
+
+| OSI 側の宣言 | dbt 側の結果 |
+| --- | --- |
+| `SUM(orders.amount)` | type=simple, expr=`amount`, measure=None, input_measures=[] |
+| `COUNT(orders.order_id)` | type=simple, expr=`order_id`, measure=None, input_measures=[] |
+
+**`SUM` / `COUNT` が消えている。**
+両者は measure を持たない同形の simple メトリクスに潰れ、残るのは対象カラム名だけになる。
+
+原因は構造の不一致にある。OSI は集約を `metrics` の式として持つが、
+MetricFlow のメトリクスは「measure への参照」を前提とする。
+OSI にフィールドレベルの measure が存在しないため、写像先が空になる。
+
+これは @sec-spec-open-questions で触れた
+「最上位 metrics か dataset 内 measures か」という設計論争が、
+実装との摩擦として表面化したものと読める。
+
+### 実行検証はできなかった
+
+計画では「取り込んだメトリクスが実際に計算できるか」まで確認するはずだった。
+**出荷版ツールチェーンでは実行できない。**
+
+- `dbt-core` 1.12.0 単体にメトリクスをクエリするコマンドはない
+- 同梱の `metricflow` 0.211.0 はライブラリのみでコンソールスクリプトを持たない
+- クエリ用の `dbt-metricflow`（最新 0.13.0）は
+  **`dbt-core<1.12.0,>=1.10.4`** を要求し、1.12.0 を明示的に除外している
+  （[PyPI のメタデータ](https://pypi.org/pypi/dbt-metricflow/json)、アクセス日 2026-07-19）
+
+**OSI インポートが載ったバージョンでは、その結果をローカルでクエリできない。**
+
+したがって集約関数の脱落が実行時にどう出るかは未確認であり、
+マニフェスト上の観測にとどめる。
+
+## 実装は公式スキーマより緩い
+
+`Field` は `additionalProperties: false` である。
+仕様外のキーを足した文書を用意すると、次のようになった。
+
+| 検証者 | 結果 |
+| --- | --- |
+| 公式バリデータ（0.1.1） | 拒否 |
+| dbt Core 1.12.0 | **受理**（警告なし） |
+
+寛容なパースは設計判断としてありうる。
+しかし警告が一切出ないため、**利用者は仕様違反に気づけない**。
+
+この項目の主張と反証条件は @sec-note-verification-plan に記載してある。
+
+## 仕様が定めていない前提
+
+OSI 文書を dbt に取り込むには、仕様に記述のない要件が3つ必要だった。
+
+1. **`.json` のみ走査される。** dbt は `OSI/` 配下を `rglob("*.json")` で探す
+   （dbt-core 1.12.0 の `dbt/parser/osi.py`。検証環境内で確認）。
+   `OSI/` に YAML を置いても無視され、parse は成功する（観測済み）。
+   一方、**仕様の公式サンプルも公式コンバータの出力も YAML である**
+2. **time spine モデルが要る。** メトリクスを含む文書を取り込むと、
+   MetricFlow が granularity DAY 以下の time spine モデルを要求する。
+   OSI 仕様に該当する概念はない
+3. **`source` が dbt 管理下のモデルと一致する必要がある。**
+   `(database, schema, alias)` で一致しなければならず、外部テーブルは参照できない
+
+いずれも「標準に準拠した文書を書けば動く」という期待を裏切る。
+消費側の事情を知らなければ通らない。
+
+## この検証で確かめられなかったこと
+
+- メトリクス実行時の挙動（ツールチェーン上不能）
+- `0.1.0` のスキーマの存在。dbt は受理するが Version History に記載がない
+- 他の7つのコンバータの出力が同様の問題を持つか（`dbt` のみ検証）
+- `osi-to-msi` 方向。dbt 同梱の `metricflow.converters.osi_to_msi` と
+  リポジトリの `ossie_dbt.osi_to_msi` の関係も未確認

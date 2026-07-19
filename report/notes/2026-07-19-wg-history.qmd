@@ -1,6 +1,4 @@
----
-title: "Apache Ossie ワーキンググループ構成の変遷（調査メモ）"
----
+# Apache Ossie ワーキンググループ構成の変遷（調査メモ） {#sec-note-wg-history}
 
 調査日: 2026-07-19
 

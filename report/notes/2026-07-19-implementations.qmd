@@ -1,6 +1,4 @@
----
-title: "Apache Ossie (旧 OSI) 実装状況の横断調査"
----
+# Apache Ossie (旧 OSI) 実装状況の横断調査 {#sec-note-implementations}
 
 調査日: 2026-07-19 / すべてのURLは同日アクセス
 

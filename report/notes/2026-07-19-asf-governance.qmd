@@ -1,6 +1,4 @@
----
-title: "Apache Ossie (incubating) — ASF移管のガバナンス面 調査メモ"
----
+# Apache Ossie (incubating) — ASF移管のガバナンス面 調査メモ {#sec-note-asf-governance}
 
 調査日: 2026-07-19 / 全アクセス日: 2026-07-19
 
@@ -290,9 +288,7 @@ Clutch は committers 4名（全員PPMC）と表示する一方、podling status
 dev@ 開設からの2週間で、**committer リストにない人物からの参加表明が複数**:
 Tian Chen (trackhouse.com)、Dragos Crintea、Yong Zheng（既に @apache.org 取得済み）、
 Emil Sadek (columnar.tech)、Aniket Kulkarni (dremio.com)、xiedeyantu、fas89、
-Joker-of-Gotham。中国系コントリビュータ（163.com ドメイン、xiedeyantu、Jensen）の
-流入が見られるのは、Zili Chen (tison) が mentor に入っている効果と整合的だが、
-因果関係は未確認。
+Joker-of-Gotham。所属・地域とも多様な参加者が短期間で集まっている。
 
 **ASF ブランドが新規参加の敷居を下げた**という定性的な兆候はある。
 
@@ -377,4 +373,4 @@ JB Onofré が champion 兼 mentor として実務を回している効果と見
 8. **2026年9月の初回 podling report の内容**（未来のため当然未確認）。
 9. **`osi-0.1.1-rc1` が pre-ASF のどの時点で打たれたか**の正確な日付、
    および ASF への IP clearance（SGA/ICLA）の完了状況。
-10. **中国系コントリビュータ流入と Zili Chen (tison) の mentor 就任の因果関係**。
+10. **新規参加者の流入と mentor 陣の顔ぶれの関係**。相関があるかは未確認。

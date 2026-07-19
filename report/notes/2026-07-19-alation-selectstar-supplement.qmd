@@ -1,6 +1,4 @@
----
-title: "Alation / Select Star の OSI / Apache Ossie 対応状況（補遺）"
----
+# Alation / Select Star の OSI / Apache Ossie 対応状況（補遺） {#sec-note-alation-selectstar}
 
 調査日 2026-07-19。`2026-07-19-implementations.md` の補足。
 エージェント間の受け渡しに失敗したため単独ファイルとして記録する。

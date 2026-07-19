@@ -1,0 +1,23 @@
+flowchart TB
+    SM["semantic_model[]<br/>モデルの入れ物<br/><i>必須</i>"]
+
+    DS["datasets[]　<i>必須</i><br/>論理データセット<br/>受注・顧客といった業務上の実体"]
+    REL["relationships[]<br/>データセット間の外部キー"]
+    MET["metrics[]<br/>集約式<br/>モデル全体のレベルで定義"]
+    FL["fields[]<br/>行レベルの属性<br/>集約は書けない（スカラ式のみ）"]
+    PHY["物理テーブル<br/>database.schema.table"]
+
+    SM --> DS
+    SM --> REL
+    SM --> MET
+    DS --> FL
+    DS -->|"source（唯一の接合点）"| PHY
+    REL -.->|"datasets 同士を結ぶ"| DS
+    MET -.->|"fields を参照して集約"| FL
+
+    classDef req fill:#e8f0e8,stroke:#2d6a3f,stroke-width:2px
+    classDef opt fill:#eef2f7,stroke:#5b6b7f
+    classDef phys fill:#fff3e0,stroke:#b8860b,stroke-width:2px
+    class SM,DS req
+    class REL,MET,FL opt
+    class PHY phys

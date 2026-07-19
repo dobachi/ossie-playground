@@ -1,28 +1,29 @@
-flowchart TB
-    subgraph W1["0.1.1 ・ 唯一のリリース版（2025-12-11）"]
-        direction LR
-        S1["仕様 osi-schema.json<br/>version は const 0.1.1"]
-        X1["公式サンプル<br/>存在しない"]
-        X2["コンバータ<br/>存在しない"]
-        S1 ~~~ X1 ~~~ X2
-    end
-
+flowchart LR
     subgraph W2["0.2.0.dev0 ・ 未リリース（本番で依存するなと明記）"]
-        direction LR
+        direction TB
         S2["仕様 main の osi-schema.json<br/>version は const 0.2.0.dev0"]
-        E2["公式サンプル 2本<br/>flights / tpcds"]
-        C2["converters/ 全8本<br/>dbt・snowflake・polaris ほか"]
-        S2 ~~~ E2 ~~~ C2
+        E2["公式サンプル: 2本"]
+        C2["コンバータ: 全8本"]
+        S2 --- E2 --- C2
     end
 
-    P["出荷版 dbt Core 1.12.0<br/>唯一の本番実装<br/>受理: 0.1.0 / 0.1.1"]
+    subgraph W1["0.1.1 ・ 唯一のリリース版（2025-12-11）"]
+        direction TB
+        S1["仕様 osi-schema.json<br/>version は const 0.1.1"]
+        X1["公式サンプル: なし"]
+        X2["コンバータ: なし"]
+        S1 --- X1 --- X2
+    end
 
-    W1 -->|"準拠文書は手書きするしかない"| P
-    W2 -->|"拒否される"| P
+    P["出荷版 dbt Core 1.12.0<br/>唯一の本番実装<br/>受理するのは 0.1.0 / 0.1.1"]
+
+    X2 -->|"準拠文書は手書きするしかない"| P
+    C2 -->|"拒否される"| P
 
     classDef missing fill:#fdf0f0,stroke:#c0392b,stroke-dasharray:5 3,color:#c0392b
     classDef impl fill:#e8f0e8,stroke:#2d6a3f,stroke-width:2px
     class X1,X2 missing
     class P impl
-    linkStyle 5 stroke:#c0392b,stroke-width:2.5px
+    linkStyle 0,1,2,3 stroke:#bbb,stroke-width:1px
     linkStyle 4 stroke:#2d6a3f,stroke-width:2px
+    linkStyle 5 stroke:#c0392b,stroke-width:2.5px

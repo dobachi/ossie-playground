@@ -1,0 +1,68 @@
+# 情報源一覧 {#sec-resources}
+
+信頼性の階層と、否定的結論の扱いについては @sec-method を参照。
+
+## Tier 1 — ASF 公式・仕様リポジトリ
+
+| 情報源 | URL | 用途 |
+| --- | --- | --- |
+| 仕様リポジトリ | <https://github.com/apache/ossie> | 仕様本体・コンバータ・バリデータ |
+| 固定コミット | `07be0176e48af67f0b46e0957a87a154586abf38` | 本調査が参照した時点 |
+| 比較タグ | `osi-0.1.1-rc1` | リリース版 0.1.1 の内容 |
+| 旧リポジトリ | <https://github.com/open-semantic-interchange/OSI> | 移管前の履歴。バージョン変遷の追跡に使用 |
+| Incubator ステータス | <https://incubator.apache.org/projects/ossie.html> | podling 情報、mentors、入り日 |
+| Incubator Clutch | <https://incubator.apache.org/clutch/ossie.html> | リリース有無、卒業条件の充足状況 |
+| Incubation Proposal | <https://cwiki.apache.org/confluence/display/INCUBATOR/OssieProposal> | PPMC 構成、Known Risks |
+| dev@ アーカイブ | <https://lists.apache.org/list.html?dev@ossie.apache.org> | podling 運営の実態 |
+| general@incubator アーカイブ | <https://lists.apache.org/list.html?general@incubator.apache.org> | 受入投票のスレッド |
+| dist 配布領域 | <https://dist.apache.org/repos/dist/release/incubator/> | Apache Release の有無 |
+| June 2026 board report | <https://cwiki.apache.org/confluence/display/INCUBATOR/June2026> | 初回レポート時期の確認 |
+
+いずれもアクセス日 2026-07-19。
+
+## Tier 2 — プロジェクト広報
+
+ASF インフラ上だが PPMC 自身の広報文であり、主張として扱う。
+
+| 情報源 | URL |
+| --- | --- |
+| 公式サイト | <https://ossie.apache.org/> |
+| Incubator 入りアナウンス | <https://ossie.apache.org/updates/ossie-enters-apache-incubator/> |
+| 旧公式サイト | <https://open-semantic-interchange.org/> |
+
+## Tier 3 — ベンダー発信・業界メディア
+
+事実関係は Tier 1 で裏を取る。単独では根拠としない。
+
+| 情報源 | URL |
+| --- | --- |
+| Snowflake（仕様確定告知） | <https://www.snowflake.com/en/blog/open-semantic-interchanges-specs-finalized/> |
+| Snowflake（パートナー拡大） | <https://www.snowflake.com/en/blog/osi-initiative-expands-partners/> |
+| Snowflake（Incubator 入り） | <https://www.snowflake.com/en/blog/apache-ossie-open-semantic-interchange-incubator/> |
+| Dremio | <https://www.dremio.com/blog/apache-ossie-incubating-the-new-name-for-open-semantic-interchange/> |
+| Databricks | <https://www.databricks.com/blog/redefining-semantics-data-layer-future-bi-and-ai> |
+| Salesforce | <https://www.salesforce.com/blog/ending-semantic-drift-unified-business-logic-foundation/> |
+
+## 消費側実装のドキュメント
+
+| 情報源 | URL |
+| --- | --- |
+| dbt: OSI semantic models | <https://docs.getdbt.com/docs/build/osi-semantic-models> |
+| dbt: osi-paths | <https://docs.getdbt.com/reference/project-configs/osi-paths> |
+
+ベンダー各社の製品ドキュメントについては @sec-method に一覧がある。
+
+## 関連リポジトリ
+
+| 情報源 | URL |
+| --- | --- |
+| Apache Polaris | <https://github.com/apache/polaris> |
+| Unity Catalog OSS | <https://github.com/unitycatalog/unitycatalog> |
+| Apache Superset | <https://github.com/apache/superset> |
+
+## 本調査の成果物
+
+| 情報源 | URL |
+| --- | --- |
+| 検証環境 | <https://github.com/dobachi/ossie-playground> |
+| 既発の関連記事 | <https://dobachi.github.io/memo-blog/2026/07/10/Open-Semantic-Interchange-technical-deep-dive/> |

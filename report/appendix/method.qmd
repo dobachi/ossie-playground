@@ -1,0 +1,120 @@
+# 調査方法と範囲 {#sec-method}
+
+本レポートには「対応が確認できなかった」という否定的な主張が複数ある。
+これは不在の証明であり、本質的に弱い。何をどこまで調べたのかを開示して、
+読者が確度を判断し追試できるようにする。
+
+## 出典の階層
+
+| 階層 | 内容 | 扱い |
+| --- | --- | --- |
+| Tier 1 | ASF 公式（incubator.apache.org, lists.apache.org, cwiki, dist.apache.org）、仕様リポジトリ | 事実認定の根拠とする |
+| Tier 2 | プロジェクト広報（ossie.apache.org） | ASF インフラ上だが PPMC 自身の広報文。主張として扱う |
+| Tier 3 | ベンダーブログ、業界メディア | 事実関係は Tier 1 で裏を取る。単独では根拠としない |
+
+## ベンダーの実装状況をどう調べたか
+
+**「参加している」と「実装している」を区別すること**を最優先に置いた。
+参加表明・プレスリリース・パートナー一覧への掲載は、いずれも実装の証拠ではない。
+
+判定は次の順序で行った。
+
+1. **製品ドキュメント**に OSI / Ossie の記載があるか
+2. 記載がある場合、それが **export / import のどちらか**、
+   **GA か preview か**、**対応する仕様バージョン**は何か
+3. **`apache/ossie` への貢献**があるか（コミット作者のメールドメイン、Issue/PR）
+
+### 網羅的に走査した3社
+
+ドキュメント全体を機械的に取得して検索したため、否定の確度が比較的高い。
+
+| 製品 | 走査対象 | 規模 | OSI 関連のヒット |
+| --- | --- | --- | --- |
+| Atlan | `docs.atlan.com` サイトマップ全 URL | 2,815 URL | 0件（4件は誤検出） |
+| Alation | `docs.alation.com/en/latest/searchindex.js`（Sphinx 検索インデックス全体） | 3.0 MB | 0件（2件は "dossier" の部分一致） |
+| Select Star | `docs.selectstar.com/llms-full.txt`（ドキュメント全文） | 408 KB | 0件 |
+
+検索語は `osi` / `ossie` / `open semantic interchange` / `interchange`。
+Alation は2026年のリリースノート3本（528 KB / 323 KB / 534 KB）も個別に確認した。
+Select Star は `llms.txt`、`changelog.md`、`features/semantic-models.md`、
+および 2.5 MB の過去 changelog も確認した。
+
+参照した主な URL は各社の補遺ノート
+（@sec-note-atlan、@sec-note-alation-selectstar）に列挙してある。
+
+### 関連ページを個別に確認した5社
+
+こちらは**網羅的走査を行っていない**。関連が見込まれるページと
+リリースノートを個別に参照したにとどまるため、否定の確度は上記3社より低い。
+
+| ベンダー | 参照した文献 |
+| --- | --- |
+| Snowflake | [semantic views overview](https://docs.snowflake.com/en/user-guide/views-semantic/overview) / [feature releases 2026](https://docs.snowflake.com/en/release-notes/feature-releases-2026) / [Tableau TDS 対応の release note](https://docs.snowflake.com/en/release-notes/2026/other/2026-03-05-semantic-views-tableau-tds) / [converters/snowflake](https://github.com/apache/ossie/tree/main/converters/snowflake) |
+| Databricks | [metric views](https://docs.databricks.com/aws/en/business-semantics/metric-views) / [metric views YAML reference](https://docs.databricks.com/aws/en/business-semantics/metric-views/yaml-reference) |
+| Dremio | [Dremio Cloud changelog](https://docs.dremio.com/dremio-cloud/changelog/)（2025-11-12 〜 2026-07-14 の範囲）/ [self-serve semantic layer](https://docs.dremio.com/dremio-cloud/help-support/well-architected-framework/self-serve-semantic-layer/) / [Dremio ブログ](https://www.dremio.com/blog/apache-ossie-incubating-the-new-name-for-open-semantic-interchange/) |
+| Cube | [semantic layer sync](https://docs.cube.dev/docs/integrations/semantic-layer-sync) |
+| Salesforce / Tableau | [Salesforce semantic layer guide](https://developer.salesforce.com/docs/data/semantic-layer/guide/get-started.html) / [Tableau Semantics](https://help.tableau.com/current/pro/desktop/en-us/examples_tableau_semantics.htm) / [converters/salesforce](https://github.com/apache/ossie/tree/main/converters/salesforce) |
+
+いずれもアクセス日は 2026-07-19。
+
+### リポジトリ側の確認
+
+`apache/ossie` について次を確認した。
+
+- 全コミットの作者メールドメイン（API を5ページ分、計500件まで取得）
+- Issue / PR の全文検索（`repo:apache/ossie+<vendor>`）
+- `converters/` 配下のディレクトリ構成と各コンバータが対象とする仕様バージョン
+- GitHub Releases、タグ一覧
+
+## 否定的結論の限界
+
+以下は本レポートの主張の弱点として明示しておく。
+
+- **NDA 下のプライベートプレビューは公開情報に現れない。**
+  非公開で実装が進んでいる可能性は排除できない
+- **ドキュメントに書かれていないだけで機能が存在する**ことはありうる。
+  特に API 経由の未文書化エンドポイント
+- 網羅走査した3社についても、検索インデックスやサイトマップが
+  ドキュメント全体を反映していない可能性がある
+- 調査は 2026-07-19 の一時点のスナップショットである。
+  実際、dbt Core 1.12 の GA（2026-07-16）と
+  `expression_language.md` の追加（2026-07-15）は調査の数日前であり、
+  **もう数日早く調べていれば違う結論になっていた**箇所がある
+
+## 再調査時の注意
+
+同種の調査を行う場合、以下の落とし穴に注意されたい。
+
+- **未認証の GitHub API は偽陰性を生む。** `api.github.com/search/code` は
+  未認証で 401 を返し、org-repos エンドポイントはレート制限にかかる。
+  どちらも「結果ゼロ」に見えるため、認証済みの `gh` コマンドを使うこと
+- **SEO 記事と製品ドキュメントは食い違うことがある。**
+  本調査では、ある製品の SEO 記事が現在形で OSI 対応を謳う一方、
+  同社の製品ドキュメントには記載がないという事例に遭遇した（@sec-ecosystem）
+- **社名を冠したディレクトリ名は所属を意味しない。**
+  `converters/orionbelt` は BlackRock ではなく独立開発者の OBML、
+  `converters/polaris` はベンダー製品ではなく Apache Polaris である
+
+## 動作確認の手順
+
+次の順序で実施した。
+
+1. **仕様を一次読解し、基礎文書として固定する**（@sec-note-spec-foundation）
+2. **基礎から検証計画を導く**（@sec-note-verification-plan）。
+   各項目について、主張・手順・裏付けとなる観測・
+   **反証となる観測**を事前に定める
+3. **計画に沿って動作確認する**。計画外の観測は増やさない
+4. 実装に投入する文書は、**必ず公式バリデータを通してから**使う
+
+4 の理由を補足する。仕様に適合しない文書を実装に読ませた場合、
+実装がそれをどう扱おうと「実装の性質」としては解釈できない。
+仕様準拠を先に保証しておかないと、観測されたものが
+仕様由来か実装由来かを切り分けられなくなる。
+
+2 で反証条件を先に定めるのは、結論ありきの検証を避けるためである。
+実際にどう定めたかは @sec-note-verification-plan、
+結果は @sec-note-verification-results にある。
+
+環境は Docker で固定し、仕様リポジトリはコミットを固定（`07be0176`）、
+検証コンテナは外部ネットワークから切り離して実行した。
+再現手順は @sec-reproduce にある。

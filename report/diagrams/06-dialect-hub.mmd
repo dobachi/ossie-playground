@@ -1,0 +1,35 @@
+flowchart TB
+    subgraph B["提案 ・ 共通方言に寄せ、実装が翻訳する"]
+        direction TB
+        W2["モデル作成者"]
+        H["Ossie_SQL_2026<br/>ANSI SQL:2003 Core のサブセット<br/>既定の方言"]
+        I1["実装A"]
+        I2["実装B"]
+        T3["Snowflake"]
+        T4["MDX系ツール"]
+        W2 -->|"1回書く"| H
+        H --> I1 --> T3
+        H --> I2 --> T4
+    end
+
+    subgraph A["現行 0.1.x ・ 書き手が方言ごとに書く"]
+        direction TB
+        W1["モデル作成者"]
+        E1["ANSI_SQL の式"]
+        E2["SNOWFLAKE の式"]
+        E3["MDX の式"]
+        T1["Snowflake"]
+        T2["MDX系ツール"]
+        W1 --> E1
+        W1 --> E2
+        W1 --> E3
+        E2 --> T1
+        E3 --> T2
+    end
+
+    classDef author fill:#eef2f7,stroke:#5b6b7f
+    classDef hub fill:#e8f0e8,stroke:#2d6a3f,stroke-width:2px
+    classDef burden fill:#fdf0f0,stroke:#c0392b
+    class W1,W2 author
+    class H hub
+    class E1,E2,E3 burden

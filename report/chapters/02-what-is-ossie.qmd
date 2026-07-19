@@ -1,0 +1,187 @@
+# Ossie とは何か {#sec-what-is-ossie}
+
+## 解こうとしている問題
+
+「売上」「解約率」「アクティブユーザー」といった指標の定義が、
+BIツール・データウェアハウス・分析ツールのそれぞれに散らばって存在する。
+同じ名前でも定義が違えば、ダッシュボード間で数字が食い違う。
+
+この「セマンティック層の断片化」自体は BI の時代から続く古い問題である。
+ダッシュボードを人間が見ている限り、数字の食い違いはいずれ気づかれる。
+「先週の資料と数字が違う」と誰かが言い出し、そこで定義の相違が発覚する。
+遅くとも意思決定の手前で止まることが多い。
+
+**AIエージェントが指標を参照して判断するようになると、この歯止めが外れる。**
+
+エージェントは受け取った定義をそのまま正しいものとして扱い、
+判断を下し、次の処理へ渡す。誤差は検知されないまま下流へ伝播し、
+その上にさらに判断が積み上がっていく。
+気づかれないまま業務の連鎖が進んでしまう点が、従来との違いである。
+
+共通の定義基盤を持つ価値が質的に上がったというのが、Ossie の出発点である。
+
+## 解法
+
+Ossie は、セマンティックモデルを YAML / JSON で宣言的に記述する
+**ベンダー中立な交換フォーマット**を定める。
+掲げる原則は「Write Once, Query Anywhere」。
+一度書いた指標定義を、BI・AI・分析ツールが同じ意味で解釈できるようにする。
+
+構造は素直である。
+
+```
+semantic_model[]
+├── datasets[]        論理データセット。source で物理テーブルを指す
+│   └── fields[]      行レベルの属性。式は方言ごとに併記できる
+├── relationships[]   データセット間の外部キー関係
+└── metrics[]         集約式。モデル全体のレベルで定義する
+```
+
+詳細は @sec-spec で扱う。
+
+### AI 向けの文脈を仕様に組み込んでいる
+
+特徴的なのは `ai_context` という要素が仕様レベルで用意されている点である。
+セマンティックモデル・データセット・フィールド・メトリクスのそれぞれに、
+AI 向けの指示・同義語・サンプル質問を付与できる。
+
+```yaml
+ai_context:
+  instructions: "受注の売上金額と件数を扱う。status で絞り込める。"
+  synonyms: ["売上", "受注"]
+  examples: ["先月の売上は？"]
+```
+
+指標定義そのものだけでなく、**それをエージェントにどう説明するか**を
+交換対象に含めている。BI 時代のセマンティック層仕様との違いはここに出ている。
+
+## スコープの線引き — 何を解かないか
+
+Ossie の位置づけを誤らないために、ここを押さえておきたい。
+
+**Ossie が与えるのは「フォーマットの相互運用」であって
+「意味の自動突き合わせ」ではない。**
+
+A社とB社が別々のセマンティックモデルを持つとする。Ossie は両社のモデルを
+同じ文法で表現させる。相手のメトリクス定義が機械可読で明示的になり、
+プロプライエタリなサイロから解放される。
+
+しかし **A社の churn と B社の churn を自動で同一視することはしない。**
+定義が食い違えば Ossie はその差分を正確に可視化するが、
+対応づけ（マッピングや統一定義の合意）は当事者のガバナンスに委ねられる。
+
+プロジェクト自身もこれを認識している。`ROADMAP.md` の
+Ontology & Semantic Interoperability 節の Motivation にこうある[^roadmap-quote]。
+
+> Ossie currently solves structural interoperability — any tool can read and write
+> semantic models in a common format — but it does not yet solve conceptual
+> interoperability, where different models may describe the same business concept
+> using different names or structures.
+>
+> （Ossie は現時点で構造的相互運用を解いている。どのツールも共通フォーマットで
+> セマンティックモデルを読み書きできる。しかし概念的相互運用はまだ解けていない。
+> それは異なるモデルが同じ業務概念を別の名前や構造で記述しうる、という問題である。）
+
+[^roadmap-quote]: Apache Ossie, "[ROADMAP.md](https://github.com/apache/ossie/blob/07be0176e48af67f0b46e0957a87a154586abf38/ROADMAP.md)" L96、コミット `07be0176`（2026-07-17）時点。アクセス日 2026-07-19。和訳は筆者による。
+
+### 先行例として何が挙がっているか
+
+同じ箇所は、意味をオントロジーで定義する先行例として
+**Palantir** と **Goldman Sachs Legend** を挙げ、
+「次元的なセマンティックモデルはその上に自然に載る」と述べている。
+
+補足しておく。
+
+**Palantir Foundry の Ontology** は、Customer や Order といった業務上の
+「もの」をオブジェクトとして定義し、それらの関係と操作を記述する層である。
+どのテーブルのどのカラムに実データがあるかとは切り離して、
+概念の側を先に定めるアプローチを取る。
+
+**Legend** は Goldman Sachs が開発し 2020年10月に FINOS へ寄贈した
+データプラットフォームで、現在は FINOS のガバナンス下、Apache 2.0 で開発されている[^legend]。
+中核の Legend-Pure は UML と OCL に着想を得た関数型のモデリング言語で、
+業務モデルを先に定義し、そこから実装を導く作りになっている。
+
+[^legend]: FINOS, "[Legend](https://github.com/finos/legend)", アクセス日 2026-07-19。Legend-Pure は "an immutable functional language based on the Unified Modeling Language (UML) and inspired by the Object Constraint Language (OCL)"（UML を基礎とし OCL に着想を得た、イミュータブルな関数型言語）と説明される
+
+**「その上に自然に載る」とはどういうことか。** 二層に分けて考えると分かりやすい。
+
+| 層 | 何を定めるか | 例 |
+| --- | --- | --- |
+| 概念層（オントロジー） | 業務上の「もの」とその関係 | 顧客とは何か、注文とは何か、両者はどう繋がるか |
+| 次元層（セマンティックモデル） | それをどう測るか | 顧客ごとの売上合計、月次の注文件数 |
+
+「顧客」という概念が先に定まっていれば、
+「顧客あたり売上」という指標はその概念を参照して定義できる。
+逆に概念層がなければ、指標は物理テーブルのカラムを直接指すしかなく、
+**同じ「顧客」を指しているのかどうかを機械的に判定できない**。
+
+Ossie が現時点で持っているのは次元層だけである。
+Ontology ワーキンググループが目指しているのは、その下に概念層を敷き、
+異なるモデルが同じ業務概念を指していることを示せるようにすることだ。
+それが「概念的相互運用」の中身である。
+
+::: {.callout-note}
+## 「オントロジー」の語には幅がある
+
+ROADMAP は Palantir と Legend をまとめて「オントロジーを使う」と括っているが、
+両者の実装は同じではない。Legend は UML / OCL 系のモデリング言語であり、
+RDF や OWL を用いる狭義のオントロジーとは系譜が異なる。
+
+Ossie の Ontology ワーキンググループが検討している言語も、
+n項関係や role 名を扱う ORM 系の設計で、こちらもまた別系統である（@sec-spec）。
+:::
+
+概念的相互運用に向けた取り組みは Ontology ワーキンググループが担うが、
+これは現時点でロードマップ上の目標であり、完成した機能ではない。
+
+::: {.callout-important}
+## 過大評価を避けるための線引き
+
+「Ossie を採用すれば部門間・企業間で指標の意味が揃う」というのは誤りである。
+揃うのは**記述の文法**であって**意味**ではない。
+
+意味を揃えるのは依然として人間の合意形成の仕事であり、
+Ossie はその合意を機械可読な形で書き留める場所を提供するにすぎない。
+
+ただしこれは小さな価値ではない。「何が食い違っているか」を
+正確に指し示せること自体が、合意形成の前提になるからである。
+:::
+
+## 業界別の共通語彙という方向
+
+この線引きを踏まえたうえで動き始めているのが、
+「業界単位で Ossie の上に共通ドメイン語彙を作る」というパターンである。
+
+**Financial Services Semantic Working Group** が 2026-06-04 に初会合を開いている[^fswg]。
+
+> The Financial Services Semantic Working Group has held its first formal meeting,
+> bringing together practitioners from across banking, insurance, asset management,
+> and market infrastructure to solve the industry's semantic alignment challenge.
+>
+> （金融サービス・セマンティック・ワーキンググループが初の正式会合を開催し、
+> 銀行・保険・資産運用・市場インフラの各領域から実務者を集めて、
+> 業界の意味整合という課題に取り組む。）
+
+[^fswg]: Open Semantic Interchange, "[Updates](https://open-semantic-interchange.org/updates/)" の 2026-06-04 のエントリ。アクセス日 2026-07-19。和訳は筆者による
+
+::: {.callout-note}
+## このWGも一覧に載っていない
+
+@sec-situation で見たワーキンググループ一覧の3系統
+（`docs/working_groups.md` の5件、公式サイトの5件、ROADMAP の3件）の
+**いずれにも Financial Services Semantic Working Group は含まれていない**。
+
+WG の全体像を示す単一の情報源は、現時点で存在しないと考えたほうがよい。
+:::
+
+異なる業界どうしをつなぐなら、双方が参照する共通リファレンス・オントロジー
+（金融の FIBO など）へのマッピングが鍵になる。
+ただし **FIBO との関係について、プロジェクトは公式に答えていない。**
+Issue と Discussion が立っているが、**いずれもコメントが付いていない**[^fibo]。
+
+[^fibo]: apache/ossie [Issue #220](https://github.com/apache/ossie/issues/220)（Documentation request: clarify Ossie's relationship with FIBO and financial-services ontology layering、コメント0件）および [Discussion #219](https://github.com/apache/ossie/discussions/219)（同趣旨、コメント0件）。アクセス日 2026-07-19。関連する未決論点は @sec-spec-open-questions
+
+なお「Net Asset Value のような業界共通の定義を揃える」という説明を
+第三者の解説記事で見かけることがあるが、
+**具体的にどの指標を対象とするかを示した一次情報は確認できなかった**。

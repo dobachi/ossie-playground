@@ -1,6 +1,4 @@
----
-title: "Apache Ossie × Apache Polaris — カタログ統合の現在地"
----
+# Apache Ossie × Apache Polaris — カタログ統合の現在地 {#sec-note-polaris-catalog}
 
 調査日: 2026-07-19（以下、URL末尾の「アクセス: 2026-07-19」は全項目共通）
 

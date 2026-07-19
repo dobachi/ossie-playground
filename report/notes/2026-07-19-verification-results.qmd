@@ -1,6 +1,4 @@
----
-title: "動作確認の結果"
----
+# 動作確認の結果 {#sec-note-verification-results}
 
 計画は `2026-07-19-verification-plan.md`、前提は `2026-07-19-spec-foundation.md`。
 再現用の一式はこのリポジトリのルート（Docker、ホスト非依存）。
