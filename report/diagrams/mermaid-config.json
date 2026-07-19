@@ -1,0 +1,14 @@
+{
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "Noto Sans JP, Hiragino Sans, sans-serif",
+    "fontSize": "14px",
+    "primaryColor": "#eef2f7",
+    "primaryBorderColor": "#5b6b7f",
+    "primaryTextColor": "#1a1a1a",
+    "lineColor": "#5b6b7f",
+    "tertiaryColor": "#f7f7f7"
+  },
+  "flowchart": { "curve": "basis", "padding": 14, "nodeSpacing": 40, "rankSpacing": 45 },
+  "markdownAutoWrap": true
+}

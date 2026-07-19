@@ -1,0 +1,24 @@
+flowchart TB
+    A["dbt プロジェクト<br/>target/semantic_manifest.json"]
+    B["公式コンバータ<br/>ossie-dbt msi-to-osi<br/>（apache/ossie 同梱）"]
+    C["生成された OSI 文書<br/>形式: YAML<br/>version: 0.2.0.dev0<br/>root に dialects<br/>source: 識別子クォート付き"]
+
+    V["公式バリデータ<br/>validation/validate.py<br/>（同一コミット）"]
+    D["出荷版 dbt Core 1.12.0<br/>OSI インポータ"]
+
+    F1["破綻1<br/>root の dialects は<br/>0.2.0.dev0 では許されない<br/>（0.1.1 時代の構造）"]
+    F2["破綻2<br/>version 0.2.0.dev0 は<br/>受理対象外"]
+    F3["破綻3<br/>source のクォートが<br/>dbt モデルと一致しない"]
+
+    A --> B --> C
+    C --> V
+    C --> D
+    V -.-> F1
+    D -.-> F2
+    D -.-> F3
+
+    classDef fail fill:#fdf0f0,stroke:#c0392b,stroke-width:2px,color:#8b0000
+    classDef art fill:#fffbe6,stroke:#b8860b
+    class F1,F2,F3 fail
+    class C art
+    linkStyle 3,4 stroke:#c0392b,stroke-width:2px

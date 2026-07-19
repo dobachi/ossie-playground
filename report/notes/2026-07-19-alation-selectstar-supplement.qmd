@@ -1,0 +1,77 @@
+---
+title: "Alation / Select Star の OSI / Apache Ossie 対応状況（補遺）"
+---
+
+調査日 2026-07-19。`2026-07-19-implementations.md` の補足。
+エージェント間の受け渡しに失敗したため単独ファイルとして記録する。
+`2026-07-19-atlan-supplement.md` と同じ構図。
+
+## 結論
+
+**Alation・Select Star とも、動く OSI / Ossie 実装は存在しない。** 両社とも表明のみ。
+
+## 横断的な確認（両社に共通）
+
+`apache/ossie` の全コミット（5ページ×100件）を取得して確認:
+
+- `@alation.com` / `@selectstar.com` のコミット作者は**ゼロ**
+- Issue/PR検索 `repo:apache/ossie+alation` → 0件、`selectstar` → 0件
+- 両社のGitHub organizationに OSI 関連リポジトリなし
+
+主要コントリビューターは Snowflake、dbt Labs、RelationalAI、Honeydew、ASF。
+
+## Alation
+
+| 項目 | 結果 |
+|---|---|
+| export / import | 確認できず |
+| 成熟度 | 表明のみ |
+| 対応仕様バージョン | 記載なし |
+| 根拠の質 | 高 |
+
+- Sphinx検索インデックス全体（`docs.alation.com/en/latest/searchindex.js`、3.0 MB、
+  ユーザーガイド全体）で `"interchange"` = 0件、`"open semantic interchange"` = 0件。
+  `ossie` の部分一致2件は **"dossier"** の誤検出
+- 2026年のリリースノート3本（528KB / 323KB / 534KB）にOSI関連の記載なし
+- 実際に出荷されているのは Snowflake 固有機能:
+  「Data Products App が Snowflake semantic views と双方向連携」
+  「Extract Semantic Views from Snowflake (Beta)」
+- 唯一のOSI言及はブログの "aligned with the Open Semantic Interchange standard" のみ
+  （`alation.com/blog/alation-introduces-semantic-model-mastering/`）。製品ドキュメントの
+  記載と整合しない
+
+## Select Star
+
+| 項目 | 結果 |
+|---|---|
+| export / import | 確認できず |
+| 成熟度 | 表明のみ |
+| 対応仕様バージョン | 記載なし |
+| 根拠の質 | 非常に高 |
+
+- `docs.selectstar.com/llms-full.txt`（408KB、**ドキュメント全文**）に加え `llms.txt`、
+  `changelog.md`、`features/semantic-models.md`、2.5MBの過去changelog を確認。
+  全ファイルで OSI / Ossie / Open Semantic Interchange の出現**0件**
+- 実際に出荷されているのは Cortex Analyst 対応で、セマンティックモデルYAMLは
+  **「Snowflake Cortex Analyst specification」**準拠と明記
+- 自社ブログも未来形: *"so they can travel across tools **as OSI matures**"*
+  — 未提供であることを自認している
+
+## 記事への示唆
+
+Atlan と合わせ、**カタログ製品3社そろって「参加はしているが実装はない」**。
+しかも各社とも、実際に出荷しているのは Snowflake 固有の semantic view / Cortex Analyst 対応。
+
+つまり現時点のカタログ製品にとって、相互運用の実体は
+**「ベンダー中立標準への対応」ではなく「Snowflakeへの個別対応」**である。
+Ossie が解こうとしている問題が、まさに現場でまだ解かれていないことの傍証になる。
+
+Select Star の "as OSI matures" は、ベンダー側の温度感を示す率直な表現として引用価値が高い。
+
+## 未確認事項
+
+- NDA下のプライベートプレビューは公開ドキュメントに出ない（両社とも言及なし）
+- `developer.alation.com` のAPIリリースノートは直接取得できず。ごく最近の未文書化
+  エンドポイントは100%は排除できないが、全文検索0件の結果と矛盾する
+- 両社とも `open-semantic-interchange.org/updates/` にパートナーとして掲載されている。
+  **パートナーシップは実装ではない**

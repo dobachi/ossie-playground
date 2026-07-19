@@ -1,0 +1,430 @@
+---
+title: "Apache Ossie（旧 OSI）調査レポート"
+---
+
+調査日: 2026-07-19
+対象: Apache Ossie (incubating) — 旧 Open Semantic Interchange
+
+素材は サイドバーの調査ノート、再現用の検証環境はこのリポジトリのルート（`make verify`）。
+
+---
+
+## 0. 先に状況を整理する
+
+Apache Ossie を調べようとすると、まず**どれを見ればいいのか分からない**という壁に当たる。
+名前・バージョン・ワーキンググループのいずれもが分裂しているためだ。
+技術の話に入る前に、この地形を先に把握しておく必要がある。
+
+### 名前が3つある
+
+| 呼称 | 何を指すか |
+| --- | --- |
+| Open Semantic Interchange (OSI) | 2025年9月の発足時の名称。旧サイトや初期の記事はこれ |
+| Apache Ossie (incubating) | 2026年6月22日の Apache Incubator 入りに伴う現名称 |
+| OSI（別物） | Open Source Initiative、Open Systems Interconnection |
+
+改名の理由は公式に明言されている。**OSI という略称が他プロジェクトと紛らわしいため**で、
+仕様そのものに変更はない。ただし改名後の "Ossie" も、Virginia Tech 由来の
+SDR フレームワーク OSSIE と同名であり、完全に一意にはなっていない。
+
+### バージョンが2つあり、どちらも中途半端
+
+ここが最も厄介な点である。
+
+![0.1.1 と 0.2.0.dev0 という2つの世界](diagrams/01-two-worlds.png)
+
+- **0.1.1** は 2025-12-11 リリースの**唯一のリリース版**。出荷版 dbt が受理するのはこちら。
+  しかし**公式サンプルもコンバータも存在しない**
+- **0.2.0.dev0** は `main` ブランチの開発版。仕様本文に
+  "Schema is mutable; **do not depend on this version in production**" と明記されている。
+  しかし**公式サンプル2本もリポジトリ内のコンバータ8本も、すべてこちらを対象**としている
+
+つまり「動く実装がある方」には手本がなく、「手本がある方」には動く実装がない。
+
+さらに、ASF としての**正式リリースは一度も出ていない**。
+存在するタグは `osi-0.1.1-rc1` の1本（リリース候補）のみで、
+Incubator の Clutch ページは "No releases" かつ "No PGP Signing Keys" を示す。
+署名鍵すら未登録であり、そもそも Apache Release を出せる状態にない。
+
+ベンダーブログが「v1.0」と書くことがあるが、**そのバージョンは実在しない**。
+
+### ワーキンググループの一覧が3系統ある
+
+| 出典 | 数 | 内容 |
+| --- | --- | --- |
+| `docs/working_groups.md` | 5 | Metric Language and Relationships / Composability / Catalog / Ontology / Sync API |
+| 公式サイト トップページ | 5 | Advanced Metrics & Expression Language / Composability / Catalog Integration / Ontology Representation / Model Converters & Developer Tools |
+| `ROADMAP.md` Current Efforts | 3 | Metric Semantics & Core Semantic Model / Catalog Integration & Semantic Services / Ontology & Semantic Interoperability |
+
+実態に最も近いのは1つ目である。リード担当者（Will Pugh、Dianne Wood / AtScale、
+Shubham Bhargav / Atlan、Kurt / RelationalAI、Francois Lopitaux / ThoughtSpot）と
+Slack チャンネルが割り当てられており、実際に会合が回っているのはこの単位だ。
+
+`ROADMAP.md` には別に「Future Efforts」7項目があり、こちらは着手前の構想である。
+両者を一列に並べて「10個のWG」と紹介している記事があるが、誤りである。
+
+**この不整合は2026年7月時点で解消されていない。**
+
+---
+
+## 1. 概要 — Ossie は何を解こうとしているか
+
+### 問題設定
+
+「売上」「解約率」「アクティブユーザー」といった指標の定義が、
+BIツール・データウェアハウス・分析ツールのそれぞれに散らばって存在する。
+同じ名前でも定義が違えば、ダッシュボード間で数字が食い違う。
+
+この「セマンティック層の断片化」自体は BI の時代から続く古い問題だが、
+AIエージェントが指標を参照して判断するようになると、定義の不一致は
+そのまま判断の誤りに直結する。共通の定義基盤を持つ価値が質的に上がった。
+
+### 解法
+
+Ossie は、セマンティックモデルを YAML / JSON で宣言的に記述する
+**ベンダー中立な交換フォーマット**を定める。掲げる原則は
+「Write Once, Query Anywhere」。一度書いた指標定義を、
+BI・AI・分析ツールが同じ意味で解釈できるようにする。
+
+構造は素直である。
+
+```
+semantic_model[]
+├── datasets[]        論理データセット。source で物理テーブルを指す
+│   └── fields[]      行レベルの属性。式は方言ごとに併記できる
+├── relationships[]   データセット間の外部キー関係
+└── metrics[]         集約式。モデル全体のレベルで定義する
+```
+
+重要な線引きが1つある。**Ossie が与えるのは「フォーマットの相互運用」であって
+「意味の自動突き合わせ」ではない。** A社の churn と B社の churn を自動で
+同一視することはしない。定義が食い違えばその差分を明示するだけで、
+対応づけは当事者のガバナンスに委ねられる。
+
+プロジェクト自身もこれを認識しており、ROADMAP に
+「構造的相互運用は解けたが、概念的相互運用（conceptual interoperability）は
+まだ解けていない」と書いている。
+
+### ASF 移管で何が変わったか
+
+2026年6月22日に Incubator 入り。Champion は JB Onofré、
+Mentor は JB Onofré・Holden Karau・Zili Chen・Russell Spitzer の4名。
+初期コミッター14名。
+
+謳われている変化は、パブリックMLでの議論、仕様変更の discussion-and-vote、
+コミッター権を所属企業ではなく貢献で得ること、である。
+
+実際に効いた例もある。受入投票の過程で、外部の committer が
+リポジトリのライセンスが CC-BY で ASF ポリシー違反だと指摘し、
+Apache License への変更で決着した。Snowflake 単独運営では
+起きなかった類の外部チェックである。
+
+移管の効果は数字にも出ている。merged PR 68本のうち32本が
+6月22日以降の約4週間に集中している（月次換算で約5本→約32本）。
+ただし観測窓が短く、ライセンスヘッダ付与のような機械的変更が
+混じっている可能性は分離できていない。
+
+---
+
+## 2. 実務目線 — 今これは使えるのか
+
+### 結論から言えば、まだ使えない
+
+![参加と実装の落差](diagrams/04-adoption-gap.png)
+
+参加組織は50社を超えるが、**製品として動く実装は2件**である。
+
+| 実装 | 方向 | 状態 |
+| --- | --- | --- |
+| dbt Core 1.12 | import + export | 2026-07-16 GA |
+| Honeydew | import のみ | 有償・要問い合わせ |
+
+Snowflake・Databricks・Dremio・Cube・Salesforce/Tableau は、
+**製品ドキュメントに OSI / Ossie の記載がない**。
+Snowflake の semantic views が実際に出荷している入出力は
+独自YAMLと Tableau TDS（Preview）であって、OSI ではない。
+
+### 「参加している」と「実装している」は別
+
+カタログ製品3社（Atlan・Alation・Select Star）は、いずれもローンチパートナーとして
+名を連ねているが、動く実装はない。ドキュメントを網羅的に調べた結果は以下のとおり。
+
+| 製品 | 調査方法 | OSI 関連の記載 |
+| --- | --- | --- |
+| Atlan | サイトマップ全2,815 URL | 0件（4件のヒットはすべて誤検出） |
+| Alation | 検索インデックス全体（3.0 MB） | 0件（2件は "dossier" の部分一致） |
+| Select Star | ドキュメント全文（408 KB） | 0件 |
+
+3社とも、実際に出荷しているのは Snowflake 固有の semantic view /
+Cortex Analyst 対応である。**現時点のカタログ製品にとって、相互運用の実体は
+「ベンダー中立標準への対応」ではなく「Snowflake への個別対応」である。**
+
+Select Star は自社ブログで "so they can travel across tools **as OSI matures**"
+と書いており、未提供であることを率直に認めている。
+
+一方で注意も要る。Atlan の SEO 記事は現在形で
+"This portability is backed by the Open Semantic Interchange (OSI) standard"
+と書いているが、**自社の製品ドキュメントと矛盾する**。裏付けのない
+マーケティング表現であり、事実として引用してはならない。
+
+### 競合が先行している
+
+Databricks の Unity Catalog Business Semantics は **2026-04-02 に既に GA**、
+metric views を Apache Spark OSS へオープンソース化中（SPARK-54119）で、
+Unity Catalog OSS にも `METRIC_VIEW` テーブル型がマージ済みである。
+
+標準化を掲げる陣営が、単独ベンダーの実装に周回遅れになっている構図がある。
+
+### カタログ統合はまだ動かない
+
+Ossie と Apache Polaris の連携は、**API の形が決まっただけ**の段階である。
+
+- Polaris の semantic-models エンドポイントは**全メソッドが `501 Not Implemented`**
+- フィーチャーフラグ `ENABLE_SEMANTIC_MODELS` は default false
+- CRUD 実装の PR は 2026-07-19 時点で未マージ
+- リリース版にも入っていない（1.6.0 の `extensions/` は `auth` と `federation` のみ）
+
+設計判断として面白い点はある。Polaris は Ossie 文書を**不透明な JSON 文字列**として
+保管する。カタログが仕様の中身を解釈しないことで、Ossie のスペック進化と
+Polaris のリリースサイクルを切り離している。Iceberg が metadata.json を
+ポインタとしてだけ持つのと同じ思想である。
+
+### 導入判断
+
+現時点で本番採用する理由は乏しい。理由は仕様の難しさではなく、
+**周辺の規約が未整備なため**である。次節の動作確認がそれを示す。
+
+ただし注視する価値はある。dbt Core 1.12 で import + export が GA したのは
+2026-07-16、**この調査のわずか3日前**である。動きは速い。
+
+---
+
+## 3. 動作確認 — dbt を挟んだ往復は成立しない
+
+Docker 環境（ネットワーク遮断）で実際に動かした。
+詳細は [動作確認の結果](notes/2026-07-19-verification-results.qmd)、
+再現手順はこのリポジトリのルートを参照（`make verify`）。
+
+### 環境
+
+| 項目 | 値 |
+| --- | --- |
+| 仕様 | `apache/ossie` @ `07be0176` / 比較タグ `osi-0.1.1-rc1` |
+| 消費側 | dbt Core 1.12.0 / dbt-duckdb 1.10.1 / metricflow 0.211.0 |
+
+### 最大の発見: 公式コンバータの出力を出荷版 dbt が受理しない
+
+仕様リポジトリ同梱の公式コンバータ（`ossie-dbt msi-to-osi`）で
+dbt プロジェクトから OSI 文書を生成し、同じ dbt に戻せるかを試した。
+
+![往復の破綻](diagrams/02-roundtrip-failure.png)
+
+**独立した3つの理由で失敗する。**
+
+**破綻1: 公式コンバータの出力が、同一コミットの公式スキーマで落ちる**
+
+```
+[Schema] (root): Additional properties are not allowed ('dialects' was unexpected)
+```
+
+コンバータはルート直下に `dialects: ["ANSI_SQL"]` を出力する。これは
+**0.1.1 のルート構造**であり、0.2.0.dev0 では削除されている。
+にもかかわらずコンバータは `version: "0.2.0.dev0"` を出力する
+（`msi_to_osi.py:124` のハードコード）。
+
+**つまりコンバータは、0.1.1 時代の構造に 0.2.0.dev0 のラベルを貼っている。**
+
+**破綻2: バージョン文字列で拒否される**
+
+```
+OSI file '...' uses unsupported version '0.2.0.dev0'.
+Supported versions: ['0.1.0', '0.1.1']
+```
+
+**破綻3: `source` の形式が一致しない**
+
+バージョンを 0.1.1 に書き換えると 0.1.1 スキーマは通るが、dbt はなお拒否する。
+
+```
+contains dataset 'orders' ("ossie_track_a"."main"."orders") that does not match
+any dbt model in this project.
+```
+
+コンバータは `source` を `'"db"."schema"."table"'` と**識別子をクォートして**出力する。
+dbt の突き合わせはクォートなしを期待する。手書きの
+`ossie_track_a.main.orders` は問題なく通った。
+
+### バージョン文字列は排他的な識別子として機能している
+
+各バージョンの JSON Schema は `version` を `const` で固定している
+（`enum` でも `pattern` でもない）。
+
+| スキーマ | `properties.version` |
+| --- | --- |
+| `osi-0.1.1-rc1` | `{"const": "0.1.1"}` |
+| `main` | `{"const": "0.2.0.dev0"}` |
+
+一方、エンティティ定義（`SemanticModel` / `Dataset` / `Field` / `Metric` /
+`Relationship`）は**両バージョンで完全に同一**である。差分は
+`Dialect`（BIGQUERY 追加）、`Vendor`（enum → 自由文字列）、
+そしてルート直下の `dialects` / `vendors` 削除に限られる。
+
+**構造的にほぼ同じ文書が、バージョン文字列だけで相互に排除される。**
+
+### 意味の欠落
+
+手書きの 0.1.1 準拠文書は、公式バリデータを通り、dbt に取り込まれ、
+`dbt run` まで到達した。**経路がまったく動かないわけではない。**
+ただし取り込みの過程で情報が落ちる。
+
+![取り込み時の情報欠落](diagrams/03-semantic-loss.png)
+
+**型情報が運ばれない。** OSI の `dimension` は `is_time` しか持たないため、
+数値カラムの `amount` も文字列カラムの `status` も同じ `categorical` になる。
+dbt は `source` から物理テーブルに到達できるが、型を見に行って補正はしない。
+
+**集約関数が脱落する。** `SUM(orders.amount)` は `expr = amount`、
+`COUNT(orders.order_id)` は `expr = order_id` となり、`SUM` / `COUNT` が消える。
+両者は measure を持たない同形の simple メトリクスに潰れる。
+
+原因は構造の不一致である。OSI は集約を `metrics` の式として持つが、
+MetricFlow のメトリクスは「measure への参照」を前提とする。
+OSI にフィールドレベルの measure が存在しないため、写像先が空になる。
+
+### 検証できなかったこと
+
+「取り込んだメトリクスが実際に計算できるか」は**確認できなかった**。
+出荷版ツールチェーンで実行する手段がない。
+
+- `dbt-core` 1.12.0 単体にメトリクスをクエリするコマンドはない
+- 同梱の `metricflow` 0.211.0 はライブラリのみでCLIを持たない
+- クエリ用の `dbt-metricflow`（最新 0.13.0）は **`dbt-core<1.12.0`** を要求し、
+  1.12.0 を明示的に除外している
+
+**OSI インポートが載ったバージョンでは、その結果をローカルでクエリできない。**
+
+### 仕様が定めていない前提
+
+dbt に取り込むには、仕様に記述のない要件が3つ必要だった。
+
+1. **`.json` のみ走査される。** dbt は `OSI/` 配下を `rglob("*.json")` で探す。
+   しかし公式サンプルも公式コンバータの出力も **YAML** である
+2. **time spine モデルが要る。** MetricFlow の要件であり OSI 仕様に該当概念はない
+3. **`source` が dbt 管理下のモデルと一致する必要がある。** 外部テーブルは参照できない
+
+### 実装は公式スキーマより緩い
+
+`Field` は `additionalProperties: false` である。仕様外のキーを足した文書を作ると、
+
+| 検証者 | 結果 |
+| --- | --- |
+| 公式バリデータ | 拒否 |
+| dbt Core 1.12.0 | **受理**（警告なし） |
+
+寛容なパースは設計判断でもあり得るが、警告が出ないため
+利用者は仕様違反に気づけない。
+
+---
+
+## 4. 仕様の中身と未決の論点
+
+### expression language は構想ではなく実装段階に入った
+
+`core-spec/expression_language.md` が **2026-07-15 付で main に存在する**
+（ステータス "Proposed Final"）。移管アナウンスの3週間後に入ったばかりで、
+リリース版 0.1.1 には未反映。
+
+解法が特徴的で、方言差を変換で吸収するのではなく
+**`Ossie_SQL_2026` という新方言を定義してデフォルトに据える**。
+ANSI SQL:2003 Core のサブセットで、REQUIRED / RECOMMENDED / MAY の
+3段階コンプライアンスを持つ。
+
+技術的に興味深いのは**集約関数の分解可能性分類**である。
+Distributive（SUM/COUNT/MIN/MAX）/ Algebraic（AVG/STDDEV）/
+Holistic（MEDIAN/COUNT DISTINCT）/ Sketch-based に分け、
+多段集約すなわち cross-grain 再集約の土台としている。
+
+書き方として誠実な点もある。日時フォーマット文字列は
+Oracle 系 `TO_CHAR` / `strftime` / Java LDML の三つ巴で移植不能なため、
+**EXPERIMENTAL として明示的に隔離**したうえで、
+全主要エンジンで表現可能な「移植可能コア」だけを定義している。
+
+### 意見が割れている論点
+
+- **集約方法の表現**: 構造化 `aggregation_method` enum（AtScale）vs
+  `OSI_*` 関数名前空間（Lloyd Tabb / Malloy）vs 移植保証付きSQLサブセット
+  + エスケープハッチ（Snowflake）。3案並存で未採択だが、実装が進んだのは3番目
+- **メトリクスツリー**: 派生メトリクスなのかどうかで提起者と RelationalAI が対立。
+  用途も「相関検証」vs「エージェントへの推論コンテキスト」で割れる
+- **最上位 metrics vs dataset 内 measures**: Cube / MetricFlow / Malloy / Looker が
+  揃って後者を採る中で Ossie だけ違う。立証責任は Ossie 側にあるという論法
+
+横断する軸は「構造化して仕様で強制する」vs「自由テキストで消費側やLLMに推論させる」で、
+押し返す側が一貫して Snowflake の2名、理由はパーサのコストである。
+**ベンダーの立場と設計上の立場が相関している。**
+
+### 沈黙が示すもの
+
+最も根本的な論点ほどコメントがゼロである。
+「grain を first-class にすべきか」「Ossie は交換フォーマットか実行標準か」
+「インポータに方言変換の義務はあるか」。
+そして **FIBO のような既存オントロジーとの関係について、
+プロジェクトは公式に一言も答えていない。**
+
+---
+
+## 5. 評価 — 標準として賭けるに足るか
+
+### ガバナンスの実態
+
+ASF 移管は「入口に立った」段階と見るのが正確である。
+
+- **Apache Release はゼロ。** 署名鍵すら未登録
+- **卒業の目処なし。** 6月22日という月末の incubation 入りだったため
+  6月の board report に含まれず、初回 podling report は9月。
+  7月19日時点で提出済みステータスレポートはゼロ
+- **仕様変更の [VOTE] は一度も実行されていない。** dev@ の `[PROPOSAL]` は
+  コミュニティミーティングの時刻の件のみ
+
+さらに、**意思決定が GitHub の外（Slack + Google Docs）へ移動している。**
+中核的な意味論である集約の再集約規則が Google Doc にあり、
+Apache リポジトリにない。実害も出ており、Discussion #101 が #22 と
+重複提案になっている。ML はアーカイブすら正常に機能していない（Issue #193）。
+
+ベンダー中立性については、proposal 自身が Known Risks に
+「貢献者が3組織に集中」「創設企業の被雇用者に依存」と明記している。
+各社ブログの「ベンダー中立になった」より、この自己申告のほうが正直である。
+
+なお BlackRock について、Snowflake のプレスリリースは "co-led by BlackRock"
+と書くが、initial committers 14名にもコミット履歴にも BlackRock 所属者はいない。
+**プレスリリース上の表現として扱うべきで、事実として断定できない。**
+
+### 総括
+
+「Write Once, Query Anywhere」以前の段階にある。
+
+同一ベンダー（dbt）の、公式エクスポータと出荷版インポータの間ですら往復しない。
+しかも障害の3つが独立に成立するため、どれか1つを直しても通らない。
+
+重要なのは、**これらがメトリクス意味論の難しさに由来していない**ことだ。
+バージョン管理・出力形式・識別子表記といった、地味な規約の未整備である。
+概念的相互運用という難問に取り組む以前に、事務的な部分で詰まっている。
+
+裏を返せば、解けない問題ではない。手書きの 0.1.1 準拠文書は
+実際に dbt へ取り込まれ、`dbt run` まで到達した。経路自体は存在する。
+必要なのは、その経路を実際に使えるようにする取り決めであり、
+それはまさに ASF のガバナンスが果たすべき役割である。
+
+したがって注視すべきは仕様の進捗ではなく、**運営が機能し始めるかどうか**である。
+具体的には、初回の Apache Release が出るか、仕様変更が ML の [VOTE] を
+通るようになるか、Google Docs と Slack にある決定がリポジトリへ戻るか。
+
+現時点では採用を推奨しない。ただし2026年7月16日に dbt の
+import + export が GA したばかりであり、状況の変化は速い。
+
+---
+
+## 参照
+
+一次情報の一覧は `resources.md`、調査の詳細は `notes/` 配下を参照。
+動作確認の再現環境はこのリポジトリのルートにある（`make verify`）。

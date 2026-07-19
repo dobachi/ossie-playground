@@ -1,0 +1,79 @@
+project:
+  type: website
+  output-dir: _site
+
+website:
+  title: "Apache Ossie 調査レポート"
+  description: "Apache Ossie（旧 Open Semantic Interchange）の仕様と実装のズレを、実際に動かして確かめた記録"
+  site-url: "https://dobachi.github.io/ossie-playground/"
+  repo-url: "https://github.com/dobachi/ossie-playground"
+  page-navigation: true
+  back-to-top-navigation: true
+
+  navbar:
+    left:
+      - href: index.qmd
+        text: レポート
+      - href: resources.qmd
+        text: 情報源
+      - href: about.qmd
+        text: この調査について
+    right:
+      - icon: github
+        href: https://github.com/dobachi/ossie-playground
+        aria-label: GitHub
+
+  sidebar:
+    style: floating
+    search: true
+    contents:
+      - href: index.qmd
+        text: 調査レポート
+      - section: "調査ノート"
+        contents:
+          - href: notes/2026-07-19-initial-survey.qmd
+            text: 初期調査
+          - href: notes/2026-07-19-spec-foundation.qmd
+            text: 仕様の基礎読解
+          - href: notes/2026-07-19-verification-plan.qmd
+            text: 動作確認の計画
+          - href: notes/2026-07-19-verification-results.qmd
+            text: 動作確認の結果
+          - href: notes/2026-07-19-wg-history.qmd
+            text: WG構成の変遷
+          - href: notes/2026-07-19-asf-governance.qmd
+            text: ASF移管のガバナンス
+          - href: notes/2026-07-19-roadmap-technical.qmd
+            text: ロードマップの技術的中身
+          - href: notes/2026-07-19-polaris-catalog.qmd
+            text: Polaris連携とカタログ統合
+          - href: notes/2026-07-19-implementations.qmd
+            text: 実装状況の横断調査
+          - href: notes/2026-07-19-atlan-supplement.qmd
+            text: 補遺 - Atlan
+          - href: notes/2026-07-19-alation-selectstar-supplement.qmd
+            text: 補遺 - Alation / Select Star
+      - href: resources.qmd
+        text: 情報源一覧
+      - href: about.qmd
+        text: この調査について
+
+  page-footer:
+    left: "調査日 2026-07-19"
+    right: "検証環境は [ossie-playground](https://github.com/dobachi/ossie-playground) にあります"
+
+format:
+  html:
+    theme:
+      light: flatly
+      dark: darkly
+    toc: true
+    toc-depth: 3
+    toc-title: 目次
+    code-copy: true
+    code-overflow: wrap
+    df-print: kable
+    lang: ja
+    fig-align: center
+    link-external-newwindow: true
+    link-external-icon: true

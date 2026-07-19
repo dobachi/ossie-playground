@@ -1,0 +1,22 @@
+flowchart LR
+    H1["OSI 文書での宣言<br/>0.1.1 準拠"]:::hdr
+    H2["dbt に取り込まれた結果"]:::hdr
+    H1 --> H2
+
+    O1["order_id ・ primary_key"] --> D1["entity: primary"]
+    O2["status ・ is_time=false<br/>（文字列カラム）"] --> D2["dimension: categorical"]
+    O3["amount ・ is_time=false<br/>（数値カラム）"] --> D3["dimension: categorical"]
+    O4["ordered_at ・ is_time=true"] --> D4["dimension: time"]
+    O5["metric total_revenue<br/>SUM(orders.amount)"] --> D5["simple metric<br/>expr = amount<br/>measure = なし"]
+    O6["metric order_count<br/>COUNT(orders.order_id)"] --> D6["simple metric<br/>expr = order_id<br/>measure = なし"]
+
+    D3 -.-> N1["数値と文字列が区別されない"]
+    D5 -.-> N2["集約関数 SUM / COUNT が脱落"]
+    D6 -.-> N2
+
+    classDef hdr fill:#eceff4,stroke:#5b6b7f,font-weight:bold
+    classDef lost fill:#fdf0f0,stroke:#c0392b,stroke-width:2px,color:#8b0000
+    classDef note fill:#fff8e1,stroke:#b8860b,color:#7a5c00
+    class D3,D5,D6 lost
+    class N1,N2 note
+    linkStyle 0 stroke-width:0px

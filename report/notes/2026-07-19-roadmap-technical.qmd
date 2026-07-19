@@ -1,0 +1,782 @@
+---
+title: "Apache Ossie ロードマップの技術的中身（調査メモ）"
+---
+
+調査日: 2026-07-19 / 調査対象リポジトリ: https://github.com/apache/ossie （main、最終コミット `07be017` 2026-07-17）
+
+## 0. 前提：バージョンとステータスの地図
+
+記事の肝は「仕様に入っている / 議論中 / 構想のみ」の区別なので、まずそこを固定する。
+
+| 成果物 | ファイル | 宣言バージョン | ステータス |
+|---|---|---|---|
+| コア仕様 | `core-spec/spec.md` | `0.2.0.dev0` | **DRAFT**（本文冒頭に "in development, schema may change before 0.2.0 is released"） |
+| コアJSON Schema | `core-spec/osi-schema.json` | — | mainに存在。トップレベルは `version` と `semantic_model` のみ |
+| 式言語 | `core-spec/expression_language.md` | `0.2.0.dev` (2026-07-15) | **"Proposed Final"**。mainにマージ済みだがリリース版仕様ではない |
+| オントロジー仕様 | `ontology/ontology.md` + `ontology/ontology.json` | `0.2.0.dev0` (2026-05-29) | mainに存在。**コアスキーマとは別スキーマ**（`osi-schema.json` に ontology は入っていない） |
+| リリース済み | — | `0.1.1` (2025-12-11) | 唯一の「リリース」。datasets/relationships/fields/metrics + マルチ方言式 + `custom_extensions` + `ai_context` |
+
+重要な注意点が2つある。
+
+1. **`expression_language.md` は 2026-07-15 付**。Apache Incubator入り（2026-06-22）の3週間後に入ったばかりで、リリース仕様には未反映。移管アナウンスの「今後の項目」の一つが、調査時点ですでにドキュメントとしては書き上がっている状態にある。
+2. **WGの数がドキュメント間で食い違う**。`ROADMAP.md` は「Current Efforts」を3つ挙げるが、`docs/working_groups.md` は5つのWGを列挙する（Metric Language and Relationships / Composability / Catalog / Ontology / Sync API）。Composability と Sync API はROADMAPの3WG区分に対応物がない。
+   - 出典: https://github.com/apache/ossie/blob/main/docs/working_groups.md （アクセス: 2026-07-19）
+   - 出典: https://github.com/apache/ossie/blob/main/ROADMAP.md （アクセス: 2026-07-19）
+
+WGリード（`docs/working_groups.md`、アクセス: 2026-07-19）:
+
+| WG | リード | Slack |
+|---|---|---|
+| Metric Language and Relationships | Will Pugh (Snowflake) | `#metric-language-working-group` |
+| Composability | Dianne Wood (AtScale) | `#wg-composability` |
+| Catalog | Shubham Bhargav (Atlan) | `#wg-catalog` |
+| Ontology | Kurt Stirewalt (RelationalAI) | `#osi-ontology` |
+| Sync API | Francois Lopitaux (ThoughtSpot) | `#wg-sync-api` |
+
+---
+
+## 1. Expression Language（式言語）
+
+### 現状（v0.1系 / spec.md 0.2.0.dev0）
+
+メトリクスもフィールドも、**「方言別の式を並べる配列」**で書く。これが質問にあった通りの形式。
+
+```yaml
+- name: email_normalized
+  expression:
+    dialects:
+      - dialect: ANSI_SQL
+        expression: LOWER(email)
+      - dialect: SNOWFLAKE
+        expression: LOWER(email)::VARCHAR
+      - dialect: BIGQUERY
+        expression: SAFE_CAST(LOWER(email) AS STRING)
+  description: Normalized email address
+```
+
+メトリクスも同じ構造で、集約式を文字列として持つだけ:
+
+```yaml
+- name: total_revenue
+  expression:
+    dialects:
+      - dialect: ANSI_SQL
+        expression: SUM(orders.amount)
+  description: Total revenue from all orders
+```
+
+`Dialect` enum は `ANSI_SQL` / `SNOWFLAKE` / `MDX` / `TABLEAU` / `DATABRICKS` / `MAQL` / `BIGQUERY`（`core-spec/spec.md`、アクセス: 2026-07-19）。SQL方言と、SQLですらない式言語（MDX、Tableau計算式、GoodData MAQL）が同じenumに混在している。
+
+- 出典: https://github.com/apache/ossie/blob/main/core-spec/spec.md （アクセス: 2026-07-19）
+
+### 課題
+
+コミュニティが挙げている問題は4つある。
+
+**(a) 「同じ名前で結果が違う」危険性。** Will Pugh (Snowflake) がIssue #52で最も強く書いている:
+
+> "We don't have any semantics around what to do if there are multiple dialects for an expression. Which should get run? / We don't have any way to ensure they all act the same."
+>
+> "This may ultimately make this standard untenable to implement and unreliable for using. If there is drift across the different dialect implementations, then depending on which is chosen, the user may get different results. Since, they are all setup with the same name this adds inherent fragility into the spec."
+
+- 出典: https://github.com/apache/ossie/issues/52 （アクセス: 2026-07-19）
+
+**(b) 冗長性。** Discussion #16 は「1つのデータセット内でフィールドごとに方言が違うユースケースが思いつかない」として、データセットレベルのデフォルト方言を提案:
+
+```yaml
+datasets:
+  - name: orders
+    source: ANALYTICS.PUBLIC.ORDERS
+    dialect: SNOWFLAKE           # NEW
+    fields:
+      - name: order_id
+        expression: ORDER_ID             # Uses dataset dialect
+      - name: amount                 # Override for multi-dialect
+        expression:
+          dialects:
+            - dialect: ANSI_SQL
+              expression: amount
+```
+
+- 出典: https://github.com/apache/ossie/discussions/16 （アクセス: 2026-07-19）
+
+**(c) enumの根拠が曖昧。** Discussion #28: 「`DUCKDB_SQL` がここに入らないのはなぜか？ `MSSQL` は？」。同スレッドはインポータの責務についても踏み込む — MSSQL式を持つモデルをSnowflakeに取り込むとき、Snowflake側が変換する義務があるのか。提案された仕様文言:
+
+> "When OSI expressions are exported from upstream systems, they are expected to fill in only expression dialects which have been validated to actual work. Exporters should not proactively add expressions in additional dialects as a 'convenience'."
+
+**このDiscussion #28はコメントゼロ。** メンテナは「変換は期待されるのか」に答えていない。
+- 出典: https://github.com/apache/ossie/discussions/28 （アクセス: 2026-07-19）
+
+**(d) パーサコスト。** Discussion #19 で Khushboo Bhatia (Snowflake):
+
+> "The one main challenge I am hearing from multiple BI tools is that it is very hard to support expressions like these without a parser. To support expressions like these, OSI will also need to build and maintain an open source parser. Maybe it is worth the cost."
+
+- 出典: https://github.com/apache/ossie/discussions/19 （アクセス: 2026-07-19）
+
+### 方向性（`core-spec/expression_language.md`）
+
+**答えは「Ossie自身が1つのSQL方言になる」。** これが最大の発見。
+
+仕様が定義するのは `Ossie_SQL_2026` という新しい方言で、YAMLへの変更は明示的に2点:
+
+> 1) Create a new dialect in the Ossie spec: Ossie_SQL_2026, which refers to this language specification.
+> 2) Make Ossie_SQL_2026 the default dialect if one is not chosen.
+
+基準は **ANSI SQL:2003 Core (ISO/IEC 9075-2:2003)**。設計原則は Portability / Familiarity / Analytical Focus / Extensibility。
+
+適用範囲は**論理層のみ**と明記されている。冒頭で層を2つに分けている:
+
+> "There are two layers in Ossie that need an expression language: **Ontology layer** ... maps more closely to modelling languages like OWL, (Py)Rel from RelationalAI, and Legend from Goldman Sachs / **Logical layer** ... maps closely to traditional BI semantic models. This proposal is only targeted at the Logical Layer."
+
+内容の要点:
+
+- **式の中で使えないもの**が明示されている: `SELECT`/`FROM`/`JOIN`（セマンティック層が扱う）、`GROUP BY`（grain指定が制御）、`WHERE`（filterプロパティを使う）、サブクエリ、CTE、集合演算、DDL/DML。
+- 関数は **REQUIRED / RECOMMENDED / MAY** の3段階コンプライアンス。`SUM`/`COUNT`/`AVG`/`MIN`/`MAX`/`STDDEV`/`VARIANCE`/`MEDIAN`/`PERCENTILE_CONT`/`PERCENTILE_DISC` が REQUIRED、`APPROX_COUNT_DISTINCT`/`APPROX_PERCENTILE` が RECOMMENDED。
+- **集約関数に「分解可能性 (Decomposability)」が付与されている**。これは技術的に面白い。多段集約（cross-grain再集約）のための分類:
+
+| Category | Functions |
+|---|---|
+| Distributive | SUM, COUNT, MIN, MAX |
+| Algebraic | AVG, STDDEV, VARIANCE |
+| Holistic | MEDIAN, PERCENTILE, COUNT DISTINCT |
+| Sketch-based | APPROX_COUNT_DISTINCT, APPROX_PERCENTILE |
+
+- **識別子の正規化ルール**をSQL準拠で定義。無引用符は大文字化、引用符付きは厳密一致。128文字上限（「多くのDBはもっと長い識別子を許すが、この数字なら広範なベンダで安全」）。
+- **移植不能な部分を "EXPERIMENTAL" と明示して隔離している**のが誠実。日時のフォーマット文字列パースがそれで、Oracle系 `TO_CHAR` トークン、`strftime` の `%` コード、Java/LDML パターンが乱立している現実を認めた上で:
+
+> "Since, this differs so widely across databases, consider this experimental for now."
+
+  その上で「全主要エンジンで表現可能なトークンの移植可能コア」（`YYYY`/`MM`/`MON`/`DD`/`HH24`/`MI`/`SS` 等）を定義し、`strftime` と Java/LDML への対応表を informative として添える。ロケール依存の月名・曜日名は「綴りがエンジン間で同一である保証はない」と明記、小数秒は方言拡張扱いに落としている。
+- ウィンドウ関数はANSI準拠で `ROW_NUMBER`/`RANK`/`DENSE_RANK`/`NTILE`/`PERCENT_RANK`/`CUME_DIST`/`LAG`/`LEAD`/`FIRST_VALUE`/`LAST_VALUE`/`NTH_VALUE` が REQUIRED。
+- **BIツール式言語への写像表**を巻末に持つ。Ossie標準 ↔ Tableau / Looker Studio / DAX。`COUNT(DISTINCT x)` → Tableau `COUNTD(x)` / DAX `DISTINCTCOUNT(x)` など。DAXやLooker Studioでは対応物なし（N/A）のセルが窓関数の行に集中しており、SQL基準の式言語をBIツールへ落とす限界がそのまま表になっている。
+
+- 出典: https://github.com/apache/ossie/blob/main/core-spec/expression_language.md （アクセス: 2026-07-19）
+
+### SQL方言差の吸収方法
+
+3段構えになっている。
+
+1. **移植可能コアを定義する**（`Ossie_SQL_2026`、REQUIRED関数群）。ここは全実装が同一に振る舞うことを要求。
+2. **方言拡張は残すが、決定性を要求する**:
+
+```yaml
+expression:
+  dialects:
+    - dialect: ANSI_SQL
+      expression: DATE_TRUNC('month', order_date)
+    - dialect: SNOWFLAKE
+      expression: DATE_TRUNC('month', order_date)
+    - dialect: BIGQUERY
+      expression: DATE_TRUNC(order_date, MONTH)
+```
+
+> "The Ossie dialect should always be supported. Other dialects MAY be ignored. There is no guarantee that all different dialects for an expression will act the same, so implementations should be consistent with their dialect handling. This means that if an Ossie model has an expression written in two dialects, the implementation should deterministically choose which dialect to use."
+
+   つまり Issue #52 の「1文書1方言」までは踏み込まず、「Ossie方言は必須サポート、他は無視してよい、ただし選択は決定的に」という妥協になっている。**#52 の提案は却下されたわけではなく、未回答のまま並存している**（#52はコメントゼロ）。
+3. **リファレンス実装で担保する**。PR #222 "Adds a SqlGlot implementation of the OSI SQL dialect"（2026-07-17、OPEN）が SqlGlot の方言として実装中。PR本文いわく:
+
+> "Implements the expression language from the Ossie spec. Also, found a spec oversight, that caused an incompatibility with ANSII around NOT operator precedence. Having ANSII compliance was a clear requirement of the expression langauge group."
+
+   実装を書いたら仕様のNOT演算子優先順位のバグが見つかった、という典型的な流れ。
+   - 出典: https://github.com/apache/ossie/pull/222 （アクセス: 2026-07-19）
+
+### ステータス整理
+
+| 項目 | ステータス |
+|---|---|
+| 方言別式配列（現行フォーマット） | **仕様済**（0.1.1リリース済） |
+| `Ossie_SQL_2026` 方言 / REQUIRED関数群 / 分解可能性分類 | **仕様済（ただしdev版・"Proposed Final"）** — mainにマージ済み、0.2.0未リリース |
+| 日時フォーマット文字列（`TO_CHAR`/`TO_DATE(str, fmt)`） | **仕様内EXPERIMENTAL** |
+| SqlGlotリファレンス実装 | **議論中**（PR #222 OPEN） |
+| 1文書1方言への制限 | **議論中**（Issue #52 OPEN、コメントゼロ） |
+| データセット/モデルレベルのデフォルト方言 | **議論中**（Discussion #16、モデルレベルは原則合意、PR募集の段階） |
+| インポータに方言変換義務があるか | **未解決**（Discussion #28、コメントゼロ） |
+| Iceberg式言語のdialect追加 | **構想**（Issue #142、コメントゼロ） |
+| DuckDB方言追加 | **議論中**（PR #229 OPEN、2026-07-18） |
+
+---
+
+## 2. Advanced Metric Logic / Windowing Functions
+
+### 現状
+
+**メトリクスは名前・説明・式・ai_context・custom_extensionsしか持たない。** 派生も累積も時系列windowも、表現手段は「SQL文字列を書く」だけ。grainの宣言もない。
+
+```yaml
+metrics:
+  - name: total_revenue
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: SUM(orders.amount)
+```
+
+`expression_language.md` によりウィンドウ関数（`OVER(PARTITION BY ... ORDER BY ... ROWS BETWEEN ...)`）自体は式として書けるようになったが、これは**「SQLのwindow構文が使える」だけで、セマンティック層としてwindowを宣言的に扱う仕組みではない**。ここが決定的な区別。
+
+### 課題
+
+**(a) 累積メトリクスの組み合わせ爆発。** Discussion #39 (siljamardla):
+
+> "It is very restrictive to define something like revenue_90days - each new window would require defining a new metric, and making sure its definition stays aligned with the original revenue definition."
+
+提案は意図的に曖昧: `cumulative: enabled` というフラグを立てて、windowの詳細はクエリ時に指定する。period-over-period差分、PoP率、period-to-dateも将来必要と挙げている。
+
+Will Pugh の対案は**クエリ時パラメータ**:
+
+> "I wonder if this could be solved by having a concept of parameters or variables?"
+
+```sql
+AVG(myfield) OVER(ORDER BY day ROWS BETWEEN :day_cumulation PRECEDING AND CURRENT ROW)
+```
+
+> "And some parameter `day_cumulation` that has a default, but can be overridden in the query."
+
+つまり **宣言的フラグ vs パラメータ化された生SQL** という対立。ただしコメント2件で、objectionらしいobjectionは出ておらず、議論として煮詰まっていない。
+- 出典: https://github.com/apache/ossie/discussions/39 （アクセス: 2026-07-19）
+
+**(b) 同じ「パラメータ化メトリクス」が独立に3回再発明されている。** これは面白い。
+- #39: 累積windowの解として Will Pugh が提案
+- #44（Universal calendar support）: Kurt Stirewalt (RelationalAI) が**実装済み**として報告 — 金融の「posts at」と「settles at」（トレーディングフロア管理者と会計士で見たい時刻が違う）問題に対し "We solved the problem by defining parameterized metrics, where the parameters were properties that could be supplied at query time to specialize the metric before compiling it."
+
+  #44 の siljamardla の元例が秀逸で、記事に使える: 1/1 23:55作成・1/2 00:15完了の注文があると、`orders_finished / orders_created` は1/1に0、1/2に無限大（またはゼロ除算）になる。正しくは作成時刻をキーにした `orders_in_finished_state` メトリクスで100%。
+  > "if the contributors (domain data owners) find this confusing, why on Earth would we leave this complexity for data users to figure out and hope they get it right."
+
+  **この「パラメータ化メトリクス」には専用のDiscussionが存在しない。** 横断的に散らばっている。
+- 出典: https://github.com/apache/ossie/discussions/44 （アクセス: 2026-07-19）
+
+**(c) 「派生メトリクス」と「メトリクスツリー」は別物、という論争。** Discussion #40 が一番面白い。提起者 siljamardla は「今の仕様はクエリコンパイラに*数字がどこから来るか*しか教えない。*何が何に影響するか*を何も言わない」と主張。
+
+Kurt Stirewalt が「要は derived metrics のことでは？名前を変えないか」と提案したのに対し、siljamardla は明確に拒否:
+
+> "I am definitely **not** talking about derived metrics. Derived metrics are also needed, absolutely. Roughly 1/3 of all metrics are derived metrics. Here I'm talking about metrics that might have absolutely nothing to do with each other from the perspective of how they're calculated or what the data source are. The relation of these metrics is strictly about the business **effect**."
+
+さらに目的でも割れる。Will Pugh は「相関仮説の検証」と読むが、Khushboo Bhatia は:
+
+> "Validation would be one use case, but I am thinking a more important use case is giving better context to agents for reasoning. For example when someone asks a question why is revenue declining, the agent could leverage the metric tree."
+
+Will Pugh は実現可能性で押し返す: "'Do these correlations I think exist, actually exist? Are they cause and effect' are tricky questions to answer and can lead to different answers."
+
+結局オントロジーWGに振られた。Duodata の lucianof が「うちでは value driver tree と呼んでいる」と参入。**「メトリクスツリー / 派生メトリクス / value driver tree」で名前すら定まっていない。**
+- 出典: https://github.com/apache/ossie/discussions/40 （アクセス: 2026-07-19）
+
+**(d) 構造化 vs 自由文字列という基軸。** Discussion #19 (Dianne Wood, AtScale) が「集約方法をenumで構造化しろ」と提案:
+
+```yaml
+metrics:
+  - name: total_sales
+    dataset: store_sales
+    field: ss_ext_sales_price
+    aggregation_method: sum
+
+  - name: p99_order_value
+    dataset: orders
+    field: amount
+    aggregation_method: percentile
+    aggregation_params:
+      percentile: 0.99
+
+  - name: average_sales_per_order
+    expression:
+      dialects:
+        - dialect: MDX
+          expression: [Measures].[total_sales] / [Measures].[orderquantity]
+```
+
+構造化 `aggregation_method` か `expression` の**どちらか一方**（both not allowed）という設計。
+
+siljamardla の支持理由が本質的で、パース容易性ではなく**下流の振る舞い制御**:加算的メトリクスは grain をまたいで再集約してよい（市→国）が、比率メトリクスは再集約してはいけない、distinct countも不可。理想的にはBIツールが加算的な構成要素を取得して比率式を再適用すべき。
+
+Lloyd Tabb (Malloy) の対案は enum ではなく**名前空間付き関数**:
+
+```yaml
+metrics:
+  - name: total_sales
+    expression: OSI_SUM(${store_sales.ss_ext_sales_price})
+
+  - name: p99_order_value
+    expression: OSI_PERCENTILE(${orders.amount}, 0.99)
+
+  - name: user_count
+    expression: OSI_APPROX_COUNT_DISTINCT(${events.user_id})
+```
+
+> "The advantage here is that you can write much more complex metrics (measures). ... I'm not sure we need to add more meta-data to the model, it should be derivable."
+
+Will Pugh は中間案:
+
+> "My personal preference would be to define a set of functions with SQL that are safe across all implementations, but don't disallow passthrough of unsafe operations."
+
+**3つの立場（構造化enum / `OSI_*` 関数名前空間 / 移植保証付きSQL関数サブセット + エスケープハッチ）が並存し、どれも採択されていない。** ただし `expression_language.md` の「REQUIRED関数群 + 方言拡張パススルー」は明らかに3番目の路線であり、実質的にWill Pugh案が実装フェーズに進んだと読める。
+
+- 出典: https://github.com/apache/ossie/discussions/19 （アクセス: 2026-07-19）
+
+**(e) 最上位metrics vs データセット内measures。** Discussion #29 (cpimhoff)。Cube / MetricFlow / Malloy / Looker はいずれもデータセットスコープの measure を持ち、top-level metric は別用途に取っておく。Ossieだけが違う。
+
+```yaml
+datasets:
+  - name: sales
+    source: public.sales
+    fields:
+      - name: price
+      - name: region
+      - name: timestamp
+    measures:
+      - name: revenue
+        expression: SUM(price)
+
+metrics:
+  - name: recent_revenue
+    measure: sales.revenue
+    filter: sales.timestamp > (NOW() - "1 week")
+  - name: revenue_by_region
+    measure: sales.revenue
+    group: sales.region
+```
+
+立証責任の議論が効いている:
+
+> "most other semantic layers arrived at a different approach than OSI. The main goal of this project is interoperability, so I am pointing out that the ball may be in OSI's court to justify deviation from 'the norm'."
+
+Lloyd Tabb: "This makes things tricky when trying to compute symmetric aggregates."（対称集約の計算が厄介になる）
+
+Khushboo Bhatia は部分的に譲歩しつつ留保: "Grain locking aggregate measures to datasets definitely has some pros. But then OSI will still need a spec to define metrics that are advanced calculations and cannot be scoped to a particular dataset."
+
+**未決。** "This is one of an important discussion points for the metric language working group. We will add a public document with the proposal when it is ready." で止まっている。
+- 出典: https://github.com/apache/ossie/discussions/29 （アクセス: 2026-07-19）
+
+**(f) grain が first-class でない。** Discussion #12 は「このメトリクスはどのgrainで定義されているか？意味を変えずに許されるjoinは？このメトリクスに有効なdimensionは？」が欠けていると指摘し、`datasets[].kind: FACT|DIMENSION`、`datasets[].entities`、`metrics[].grain` / `metrics[].base_dataset` を提案。
+
+> "Even a minimal 'base_dataset + grain entity' prevents a ton of wrong queries by downstream tools/agents."
+
+**コメントゼロ。** #29 と #19 の上流にあたる論点なのに誰も反応していない。
+- 出典: https://github.com/apache/ossie/discussions/12 （アクセス: 2026-07-19）
+
+なお Discussion #82 で harelix がこの欠落の実害を示している。TPC-DS例の `sales_by_brand` メトリクスは、SQL式が `total_sales` と完全に同一で、区別する情報が説明文の括弧書きにしかない:
+
+```yaml
+- name: sales_by_brand
+  expression:
+    dialects:
+      - dialect: ANSI_SQL
+        expression: SUM(store_sales.ss_ext_sales_price)
+  description: Total sales by brand (requires grouping by item.i_brand)
+  ai_context:
+    synonyms:
+      - "brand sales"
+      - "brand performance"
+      - "brand revenue"
+```
+
+> "The data engineer encoded that requirement in a prose parenthetical inside description because the spec gave them nowhere structured to put it. ... A required grouping isn't a suggestion to the LLM. It's a property of the metric itself, and it should be expresible as one."
+
+- 出典: https://github.com/apache/ossie/discussions/82 （アクセス: 2026-07-19）
+
+### ステータス整理
+
+| 項目 | ステータス |
+|---|---|
+| 式としてのウィンドウ関数（`OVER(...)`） | **仕様済（dev版）** — expression_language.md でREQUIRED |
+| 分解可能性による多段集約の分類 | **仕様済（dev版）** — ただし再集約規則そのものは別文書（"Ossie Analytical Context Extension"、Google Doc）参照 |
+| 累積メトリクス（`cumulative: enabled` 等の宣言的表現） | **議論中**（Discussion #39、方向未決） |
+| クエリ時パラメータ化メトリクス | **構想**（専用スレッドなし、#39/#44に散在。RelationalAIは自社実装済みと報告） |
+| 派生メトリクス | **構想**（ROADMAPのdeliverableに記載、仕様なし） |
+| メトリクスツリー / value driver tree | **構想**（Discussion #40、オントロジーWGへ移管、定義自体が未合意） |
+| 構造化 `aggregation_method` | **議論中**（Discussion #19、3案並存・未採択） |
+| dataset内 `measures` | **議論中**（Discussion #29、WGへ持ち越し） |
+| `metrics[].grain` / entity | **構想**（Discussion #12、コメントゼロ） |
+| Dimension階層・時間セマンティクス・カレンダー | **構想**（ROADMAPの "Future Efforts"。Discussion #21 に具体案あり） |
+| コンプライアンススイート（cross_grain / bridge / fanout テスト） | **議論中**（PR #125 OPEN、2026-05-18〜） |
+
+補足: PR #125 "Proposal semantics foundation"（OPEN）は、grain・bridgeテーブル・fan-out・distinct count のfanoutなどを検証する `compliance/foundation-v0.1/` テストスイートを含む大型PR。テストケース名（`t-021-count-distinct-fanout`、`t-016-non-distributive-over-bridge-accepted`、`t-005c-nested-avg`）から、多段集約の意味論を実際に固定しにいっていることが読める。**5月から2か月マージされていない。**
+- 出典: https://github.com/apache/ossie/pull/125 （アクセス: 2026-07-19）
+
+---
+
+## 3. Platform Converters
+
+### 誰がどう提供するのか
+
+**答え: 仕様リポジトリ本体が抱えている。** 仕様側と実装側の分離はされていない。
+
+`converters/` 配下に現在ある実装（`ls converters/`、アクセス: 2026-07-19）: `dbt` / `gooddata` / `honeydew` / `omni` / `orionbelt` / `polaris` / `salesforce` / `snowflake`。言語はPython中心（`pyproject.toml`）だが、`polaris` と `salesforce` はJava（`pom.xml`）。
+
+`converters/` はリポジトリ全体2.1MBで最大のディレクトリ。**仕様本体（`core-spec/` 92KB）よりコンバータのコードのほうが桁で大きい。**
+
+### アーキテクチャ
+
+明示的に **hub-and-spoke**。`converters/README.md` より:
+
+> "With N vendors, a point-to-point strategy would require N*(N-1) converters. With Ossie as the hub, only 2*N converters are needed (one import and one export per vendor), and interoperability with all other vendors comes for free."
+
+コンバータの責務は2方向:
+- **Export (Ossie → Vendor)**
+- **Import (Vendor → Ossie)** — ベンダ固有メタデータは `custom_extensions` へ
+
+方言選択のフォールバック連鎖が規定されている:
+> "Prefer the vendor-specific dialect (e.g., SNOWFLAKE for a Snowflake converter) / Fall back to ANSI_SQL if the vendor dialect is not available / Raise a warning or error if neither is available"
+
+ラウンドトリップ忠実性の原則:
+> "**Never discard information silently**. If a vendor-specific attribute has no Ossie core equivalent, store it in `custom_extensions`."
+> "**Preserve `custom_extensions`** for all vendors, not just the target vendor."
+
+`ai_context` を持たないベンダへエクスポートするときは `vendor_name: COMMON` の `custom_extension` に退避してラウンドトリップを守る、という具体的な指示まである。
+
+- 出典: https://github.com/apache/ossie/blob/main/converters/README.md （アクセス: 2026-07-19）
+
+### 課題・観測
+
+- **仕様のdialect enumとvendor listが連動して膨らむ。** `converters/README.md` の Supported Vendors は `SNOWFLAKE`/`SALESFORCE`/`DBT`/`DATABRICKS`/`OMNI` を挙げるが、`spec.md` の Dialect enum は `MDX`/`TABLEAU`/`MAQL`/`BIGQUERY` を含む別集合。**vendor と dialect が別概念なのに、どちらも「増え続けるenum」として運用されている**（JSON Schemaの `$defs` にも `Dialect` と `Vendor` が別々に存在）。
+- **新規コンバータのPRが渋滞している。** OPEN PRから: DuckDB (#229)、Databricks Unity Catalog Metric View (#224、#178、#152 — 同じものが3本)、Ataccama ONE importer (#174)、LookML/BigQuery (#144)、Legend transpiler (#132)、Spark (#93)、semantido (#230)、ontology converters (#147)。IssueにもLightdash (#227)、WrenAI MDL (#196)、Snowflake→OSI import (#162) の要望。
+- **DuckDB PR (#229) の作者が #52 との衝突を自分から認めている**のが示唆的:
+  > "Aware of #52 (single dialect per document); the enum addition is orthogonal — whichever way that lands, DuckDB needs to be a valid dialect value."
+
+  つまり「1文書1方言」の議論が未決のまま、dialect enum は増え続けている。
+- **JB Onofré（ASF、Ossie のメンター/コミッタ）が Iceberg式言語のdialect追加を提案している**（Issue #142）。本文は一行:
+  > "Similar to `ANSI_SQL`, I wonder if we should not have `ICEBERG_EXPRESSION` in the spec. @khush-bhatia wdyt?"
+
+  **コメントゼロで未回答。** Apache移管後のコミッタからの提案が放置されている。
+- 出典: https://github.com/apache/ossie/pull/229, https://github.com/apache/ossie/issues/142 （アクセス: 2026-07-19）
+
+### ステータス整理
+
+| 項目 | ステータス |
+|---|---|
+| hub-and-spokeアーキテクチャ + コンバータ作成ガイド | **仕様済**（`converters/README.md`） |
+| 実装済みコンバータ8種 | **mainにマージ済み** |
+| コンバータ用共通モジュール（Javaバインディング） | **構想**（Issue #121） |
+| Spark / Databricks UC / DuckDB / LookML / Legend / Ataccama 等 | **議論中**（PR OPEN） |
+| Iceberg式言語のdialect化 | **構想**（Issue #142、未回答） |
+| コンバータの適合性テスト（compliance/） | **ほぼ空**（`compliance/README.md` の中身は "This is for compliance tests" の一行のみ）。実体は未マージのPR #125 側 |
+
+---
+
+## 4. Standardized Semantic Query Specification
+
+### これはスコープ拡大か
+
+**明確にYES。そしてROADMAPは「Future Efforts」に置いている（=現行WGではない）。**
+
+`ROADMAP.md` の "Semantic Query Language & Reference Engine" 節:
+
+> **Goal:** Define a standard query interface for interacting with Ossie models and provide a canonical implementation for interpreting and executing them.
+>
+> **Motivation:** Consumers (BI tools, AI systems, APIs) need a consistent way to query semantic models independent of underlying SQL dialects. A reference engine ensures consistent interpretation of the spec and accelerates ecosystem adoption.
+
+Deliverables:
+- Standard semantic query language (**Ossie-native or SQL-extended**)
+- Mapping from semantic queries → execution plans
+- Support for metrics, dimensions, filters, and relationships
+- **Reference compiler from Ossie → SQL**
+- Canonical handling of joins, aggregations, and filters
+- **Test suite to validate conformance across implementations**
+
+「interchange format（交換フォーマット）」から「実行セマンティクスを定義する標準」への明確な移行。ここが記事の論点になる。
+
+### 既存クエリ標準との関係
+
+**判明していること:**
+- **SQL**: 二重の関係にある。(a) `Ossie_SQL_2026` はANSI SQL:2003 Coreのサブセットとして式言語を定義済み。(b) クエリ言語は "Ossie-native or SQL-extended" と両論併記で未決。(c) リファレンスコンパイラの出力先はSQL。
+- **MDX**: `Dialect` enum に**すでに入っている**が、これは「式の方言」としてであって「クエリ言語」としてではない。MDXは本来クエリ言語なので、この位置づけは仕様上ねじれている。
+- **GraphQL**: **リポジトリ内に言及なし。** 未確認。
+- PR #125 の現行実装は "It currently has a JSON interface to match with the spec, although a SQL interface is expected to come in later proposals / implementations." — **まずJSONクエリインタフェース、SQLインタフェースは後続提案**、という順序。`expression_language.md` にも "The SQL Interface will be defined in a different document." と2箇所で言及がある。
+- 出典: https://github.com/apache/ossie/pull/125, https://github.com/apache/ossie/blob/main/core-spec/expression_language.md （アクセス: 2026-07-19）
+
+### 未回答の根本問題
+
+Discussion #24 "Relationship Semantics" が2つの質問を投げている:
+
+> "Are there any restrictions on the graph of relationships? (E.g. Are undirected cycles allowed?)"
+> "Is aligning on some actual query semantics for relationships a goal or non-goal? E.g. which join type is used, how filters flow?"
+
+**コメントゼロ。** 「Ossieは純粋な交換フォーマットなのか、実行セマンティクスを定義するのか」という、この節全体の前提を問う質問が未回答のまま。関連して Discussion #50（Relationship Cardinality を明示せよ）は、カーディナリティが推論任せだとSQL生成が "either lossy or error-prone" になると Coginiti / Cube / AtScale の実装経験から指摘している。
+
+- 出典: https://github.com/apache/ossie/discussions/24, https://github.com/apache/ossie/discussions/50 （アクセス: 2026-07-19）
+
+### ステータス整理
+
+| 項目 | ステータス |
+|---|---|
+| セマンティッククエリ言語 | **構想**（ROADMAP "Future Efforts"、WG未設置） |
+| Ossie→SQL リファレンスコンパイラ | **構想**（同上）。ただしPR #125 が事実上の先行実装 |
+| JSONクエリインタフェース | **議論中**（PR #125 に実装あり、未マージ） |
+| SQLインタフェース | **構想**（"will be defined in a different document"） |
+| 適合性テストスイート | **議論中**（PR #125） |
+| リレーションシップのクエリ意味論（join種別・フィルタ伝播） | **未解決**（Discussion #24、コメントゼロ） |
+| GraphQLとの関係 | **リポジトリ内に言及なし** |
+
+---
+
+## 5. Ontology & Semantic Interoperability WG
+
+### 問題認識
+
+`ROADMAP.md` の記述が「構造的相互運用 vs 概念的相互運用」を最も端的に述べている:
+
+> "Ossie currently solves structural interoperability — any tool can read and write semantic models in a common format — but it does not yet solve conceptual interoperability, where different models may describe the same business concept using different names or structures."
+
+Discussion #108 "Shared Semantics OSI" の具体例のほうが記事向き:
+
+> "When one semantic model defines a field as `security_type` and another calls the same concept `instrument_class`, both are structurally valid OSI. But a consumer still has to reverse-engineer that they mean the same thing."
+
+同スレッドは自己限定も明示していて、これは誠実:
+
+> "Concept-level standards are not a silver bullet. Not every concept lends itself to standardization — some carry nuance, some embed intellectual property, and some vary enough across contexts that consensus may not be possible."
+
+提案は「業種別に整理された、任意参照のガバナンス付き概念定義辞書」。"Not a schema extension. Not a mandate."
+- 出典: https://github.com/apache/ossie/discussions/108 （アクセス: 2026-07-19）
+
+### 何を解こうとしているか（`ontology/ontology.md`、mainに存在）
+
+**予想以上に踏み込んでいる。** これは「用語集」ではなく、ORM（Object-Role Modeling）系の本格的な概念モデリング言語。RelationalAI主導であることが色濃く出ている（WGリードは Kurt Stirewalt / RelationalAI）。
+
+構成要素:
+
+- **ConceptType は2種**: `EntityType`（他の情報を介してしか参照できない実世界の概念。人はSSNやメールで参照する）と `ValueType`（追加の意味を持つデータ型。SSNは「厳密に9桁の正整数である文字列」）。
+- **組み込み概念**: `Any` / `Boolean` / `Date` / `DateTime` / `Decimal` / `Float` / `Integer` / `String`。
+- **Relationship が n項（n-ary）**。ここが通常のセマンティック層と決定的に違う。単項・二項・三項以上を許す。
+- **`verbalizes`（言語化パターン）が必須フィールド**。これがユニーク:
+
+```yaml
+ontology:
+  - concept:
+      name: Person
+      type: EntityType
+      identify_by: [ nr ]
+    relationships:
+      - name: nr
+        roles:
+          - concept: SocialSecurityNr
+        verbalizes: [ '{Person} is identified by {SocialSecurityNr}' ]
+        multiplicity: OneToOne
+      - name: earns
+        roles:
+          - concept: Salary
+        multiplicity: ManyToOne
+        verbalizes: [ "{Person} earns {Salary}" ]
+```
+
+  各リンクを自然言語文として言語化するパターンを**必須で**持たせている。ORMの伝統だが、LLM/エージェント向けのグラウンディング資産としても効く設計。
+
+- **role名で曖昧性を解消**。同じ概念が複数のroleを演じる場合:
+
+```yaml
+ontology:
+  - concept:
+      name: Store
+      type: EntityType
+    relationships:
+      - name: ships_to_in_days
+        roles:
+          - concept: Store
+            name: destination
+          - concept: NrDays
+        multiplicity: ManyToOne
+        verbalizes: [ "{Store} ships to {Store:destination} in {NrDays}" ]
+```
+
+- **`derived_by` で再帰的な導出規則が書ける**。ancestor_of の基底ケースと再帰ケース:
+
+```yaml
+      - name: ancestor_of
+        roles:
+          - concept: Person
+            name: "descendant"
+        derived_by:
+          - "Person.parent_of(descendant)"
+            "Person.ancestor_of.parent_of(descendant)"
+```
+
+  税率のようなビジネスルールも同じ枠組み:
+
+```yaml
+      - name: taxed_at
+        roles:
+          - concept: TaxRate
+        derived_by:
+          - "Person.files_single AND Person.earns <= 11925 AND TaxRate == 10.0"
+          - "Person.files_married_joint AND Person.earns <= 23850 AND TaxRate == 10.0"
+```
+
+- **`requires` で制約**:
+
+```yaml
+  - concept:
+      name: SocialSecurityNr
+      type: ValueType
+      extends: [Integer]
+      requires: [ "0 < SocialSecurityNr", "SocialSecurityNr <= 999999999" ]
+```
+
+- **`ontology_mappings` で論理層へ接続**。概念→データセット/フィールドの写像。単純識別子なら SQL式1本:
+
+```yaml
+concept_mappings:
+  - concept: Person
+    object_mappings:
+      - expression: PERSONS.SSN
+```
+
+  複合識別子は `referent_mappings` の入れ子で:
+
+```yaml
+concept_mappings:
+  - concept: OrderLineItem
+    object_mappings:
+      - referent_mappings:
+          - relationship: nr
+            expression: LINEITEMS.L_LINENUMBER
+          - relationship: order
+            referent_mappings:
+              - relationship: CustOrder.nr
+                expression: LINEITEMS.L_ORDERKEY
+```
+
+  `link_mappings` は木構造で、共通のprefixを一度だけ書けるようにしている（Item を4つのrelationshipで再宣言しない）。
+
+- 出典: https://github.com/apache/ossie/blob/main/ontology/ontology.md （アクセス: 2026-07-19）
+
+### 既存オントロジー（FIBO等）との関係
+
+**ここが一番の空白地帯。プロジェクトは公式には何も答えていない。**
+
+- Discussion #219 と Issue #220（いずれも Joker-of-Gotham、2026-07-17）が正面から質問している。FIBO = OWL/RDFベースの金融サービス参照オントロジー、Ossie = YAML/JSON指向のセマンティックモデル交換層、という層分けで合っているか。Ossie概念はFIBOのクラス/プロパティ**IRI**を持つべきか。マッピングはfirst-classオブジェクトか、拡張/アノテーションか、別の alignment package か。FIBOのバージョン/名前空間/リリース日/プロファイルを記録すべきか。業種パッケージはどこに置くか。
+
+  **両方ともコメントゼロ。メンテナからの応答なし。** Issue #220 は「FIBO-aligned / FIBO-derived / FIBO-compatible / independent のどれなのか」を文書化してほしいという要求だが、答えが出ていない。
+  - 出典: https://github.com/apache/ossie/issues/220, https://github.com/apache/ossie/discussions/219 （アクセス: 2026-07-19）
+
+- **FIBOへの唯一の実質的な言及**は Discussion #108 内の jklahr のコメント。Extended Metadata 提案の `semantic_mappings` で既に足りるのでは、として:
+
+```yaml
+semantic_mappings:
+  - source: https://github.com/edmcouncil/fibo/blob/master/SEC/Equities/EquityInstruments.rdf
+    identifier: Dividends
+```
+
+  つまり「ガバナンス付き概念辞書を作る」vs「単にURIを引用する仕組みを置く」で未決。
+
+- **OWL/RDF連携は仕様本体ではなくPRで進行中。** PR #146 "Ontology: Add custom_properties (e.g. for OWL import)"（OPEN、2026-06-03）。現状 `additionalProperties: false` で固められているため OWL→OSI→OWL のラウンドトリップが lossy になる、という問題提起:
+
+```yaml
+ontology:
+  - concept:
+      name: Person
+      type: EntityType
+      custom_properties:
+        iri: "http://xmlns.com/foaf/0.1/Person"
+        rdfs:label: "Person"
+        owl:equivalentClass: "https://schema.org/Person"
+```
+
+  設計判断を明示的にフラグしているのが良い — コア仕様の `custom_extensions: [{vendor_name, data}]`（dataはJSON文字列）を**あえて再利用しなかった**理由:
+  > "OWL/RDF is a standard interchange format, not a single 'vendor', so a `vendor_name` blob is an awkward fit. / A structured map keeps OWL annotations as real, queryable/validatable JSON instead of an opaque string."
+
+  言語タグ付きリテラルは `rdfs:label@en` のように BCP 47 タグを `@` で付ける規約を提案（`@` はCURIEのlocal nameに使えないので曖昧性がない）。
+  - 出典: https://github.com/apache/ossie/pull/146 （アクセス: 2026-07-19）
+
+- 関連して PR #147 "Adding ontology converters"、PR #132 "Add basic legend transpiler to generate Legend models/mapping/store from OSI models"（Goldman Sachs Legend）がいずれもOPEN。
+
+- Discussion #67 は **LinkML** をメタモデリング言語として採用する案を出している:
+  > "The meta model of everything can be captured and generated including but not limited to the JSON-schema but also data formats and W3C friendly concepts like SHACL and OWL and Turtle, etc."
+
+  賛同1件、メンテナ応答なし。オントロジー作業（OWL/RDF出力）と直結する話だが、**誰も2つのスレッドを繋げていない。**
+  - 出典: https://github.com/apache/ossie/discussions/67 （アクセス: 2026-07-19）
+
+### 提案の重複という現象
+
+Discussion #22（Kurt Stirewalt / RelationalAI、"relational ontologies" のWG設置提案）と Discussion #101（jochenchrist、Palantirのオントロジー思想を踏まえた独自提案）が**互いを知らずに並行して立った**。#101 の提案は `ontology` を `semantic_model` の peer として置き、`hasMany`/`belongsTo`/`references` という意味的リレーションシップを FKベースのリレーションシップと区別するもの:
+
+```yaml
+version: "0.1.1"
+
+ontology:
+  - name: commerce
+    description: Commerce domain ontology
+    concepts:
+      - name: Customer
+        description: A person or organization that purchases goods
+        ai_context:
+          synonyms: ["client", "buyer", "account"]
+        primary_key: [customerId]
+        properties:
+          - name: customerId
+            logical_type: string
+            required: true
+          - name: email
+            logical_type: string
+            required: true
+            classification: PII
+    relationships:
+      - name: customer_orders
+        from: Customer
+        to: Order
+        type: hasMany
+        description: A customer can place multiple orders
+```
+
+Will Pugh の応答は「Slackの `#osi-ontology` と Google Doc へどうぞ」。**重複が起きた原因は、意思決定がGitHub上で可視化されていないこと。**最終的に採用されたのは #101 のPalantir風スキーマではなく、`ontology.md` に見られるRelationalAI系のORM/n項関係モデルである。
+- 出典: https://github.com/apache/ossie/discussions/22, https://github.com/apache/ossie/discussions/101 （アクセス: 2026-07-19）
+
+### ステータス整理
+
+| 項目 | ステータス |
+|---|---|
+| オントロジー仕様（Concept/Relationship/roles/multiplicity/derived_by/requires/verbalizes） | **仕様済（dev版）** — `ontology/ontology.md` + `ontology/ontology.json` が main に存在、0.2.0.dev0 |
+| 論理層への `ontology_mappings`（object/referent/link mappings） | **仕様済（dev版）** — 同上 |
+| オントロジー層用の式言語 | **構想** — `expression_language.md` が明示的に対象外とし「別提案として扱う」 |
+| OWL/RDF のIRI・アノテーション保持（`custom_properties`） | **議論中**（PR #146 OPEN） |
+| FIBOとの関係の公式見解 | **未回答**（Issue #220 / Discussion #219、コメントゼロ） |
+| `semantic_mappings` による外部オントロジー参照 | **議論中**（Extended Metadata提案 Issue #100 の一部） |
+| 業種別セマンティックモデルテンプレート | **構想**（ROADMAP "Future Efforts"） |
+| Legend トランスパイラ / オントロジーコンバータ | **議論中**（PR #132、#147 OPEN） |
+| LinkML採用 | **構想**（Discussion #67、メンテナ応答なし） |
+| メトリクスツリー | **オントロジーWGへ移管された構想**（Discussion #40） |
+
+---
+
+## 6. 記事にできそうな横断的論点
+
+1. **「Ossie自身が方言になる」という解法。** 方言差の吸収を「変換で解く」のではなく「移植可能な部分集合を定義して、そこに全員を寄せる」で解こうとしている。`Ossie_SQL_2026` をデフォルト方言にする、という一文が実質的に仕様の性格を変えている。しかも移植不能な領域（日時フォーマット文字列）を EXPERIMENTAL として正直に隔離している。
+
+2. **仕様と実装のフィードバックループが実際に回っている証拠。** PR #222 が「SqlGlotで実装したらANSI準拠のNOT演算子優先順位のバグが仕様に見つかった」と書いている。仕様先行で書かれたドキュメントが実装で修正されている。
+
+3. **沈黙が最大のシグナル。** 最も foundational な論点ほどコメントゼロ:
+   - #12（grainをfirst-classに）
+   - #24（リレーションシップのクエリ意味論 — Ossieは交換フォーマットか実行標準か）
+   - #28（インポータに方言変換義務はあるか）
+   - #52（1文書1方言）
+   - #142（Iceberg式言語 — ASFメンター JB Onofré 提案）
+   - #219 / #220（FIBO）
+
+   Discussion #45 で cpimhoff が 1.0 を "stable" と呼ぶことに驚いた理由がここにある。Khushboo Bhatia の回答も揺れている: 「安定している。ただし次バージョンには破壊的変更が含まれる*かもしれない*」。
+
+4. **意思決定がGitHubの外（Slack + Google Docs）に移動している。** `expression_language.md` も `ROADMAP.md` も Google Doc へのリンクを含む（"OSI Discussion Point: Core Analytic Abstractions"、"Ossie Analytical Context Extension"、Semantics Foundation、Ontology提案）。**分解可能性による再集約規則という中核的な意味論が、Apacheリポジトリではなく Google Doc にある。** Apache Way の観点では incubation 中に解消すべき典型的な課題であり、実際 Discussion #101 の重複提案という具体的な損失が発生している。さらに、Slack招待リンクが特定ドメインを弾いて参加できなかったという報告もある（#29）。
+
+5. **「構造化 vs 自由テキスト」という一本の軸が全論点を貫いている。** #19（aggregation_method）、#29（measures）、#52（dialect）、#82（verified_queries）、#12（grain）は全部これ。構造化を推すのは cpimhoff / siljamardla / Dianne Wood (AtScale) / harelix / nikitastrezhnev、押し返すのは Will Pugh と Khushboo Bhatia（いずれもSnowflake）で、理由は一貫して「パーサのコスト」と「その差は意味的なものか、単に書き心地の問題か」。**ベンダの立場と設計の立場がきれいに相関している**のが読み取れる。
+
+6. **「クエリ時パラメータ化メトリクス」が3回独立に再発明されている。** #39（累積window）、#44（金融の posted-at / settled-at）。RelationalAI は既に自社製品で実装済みと報告。にもかかわらず専用のDiscussionが存在しない。**仕様に入っていない機能で最も需要が実証されているのはこれ。**
+
+7. **オントロジー層の設計思想がBIセマンティック層と全く違う。** n項関係、role名、`verbalizes` による自然言語化パターン必須、`derived_by` の再帰規則。これはORM/RelationalAI（(Py)Rel）の系譜であって、Cube/Looker/dbt系の系譜ではない。`expression_language.md` が「オントロジー層でも同じ式言語を再利用できたら良いのだが、別提案として扱う」と書いているのは、この2つの層が本質的に違う言語を要求していることの表れ。**Ossieは1つの仕様の中で2つの異なるモデリング伝統を接合しようとしている。**
+
+8. **`verbalizes` 必須という設計はLLM時代に効く。** 各リレーションシップに「{Person} earns {Salary}」のような言語化テンプレートを必須で持たせるのは、ORM由来の伝統的な設計だが、エージェントがセマンティックモデルを読んで推論する用途と綺麗に噛み合う。`ai_context` の synonyms とは別レイヤの、構造に紐づいた自然言語グラウンディング。
+
+9. **メトリクスの「意味」が説明文の括弧書きに逃げている実例**（#82 の `sales_by_brand`）。仕様に置き場所がないから prose に書かれ、LLMが読むしかなくなる。「required grouping は LLM への提案ではなくメトリクスの性質だ」という harelix の指摘は、セマンティック層の設計論として一般性がある。
+
+---
+
+## 未確認事項
+
+- **Google Doc の中身を確認していない。** 中核的な設計判断がここにある可能性が高い:
+  - "Semantics Foundation"（`1bEuIb2eUpwesi6cIZ5FOkXMQDh7KAPIjZsWchmLgOAk`） — grain・多段集約の意味論
+  - "Ossie Analytical Context Extension"（`1MKNySGmEv_C6CzBZ7um9Ym3_mMvmOolpDuwPvRzQ1bo`） — 分解可能性に基づく再集約規則
+  - "OSI Discussion Point: Core Analytic Abstractions"（`1si8DqU4arG18ZgX4HnRG5D_zS2X7V1s-vgNY35rvxhM`） — 名前空間
+  - Ontology提案（`1i2usg8XD_BsI8hc1RDTwqaZaFhgTyTKLhl-5vCj3XXk`）
+  - Extended Metadata提案（`1DLuteF0WwlVbpD5kmHhcqa6vItqNFL4MoAQrImy6dKo`）
+  - 認証が必要な可能性があり、公開されているかも未確認。
+- **Slack (`#metric-language-working-group`, `#osi-ontology` 等) の議論内容は未確認。** 各WGの実質的な決定はここで行われている可能性が高い。
+- **Apache のメーリングリスト（dev@ossie.apache.org）を確認していない。** Incubator入り後、GitHub Discussions からMLへ議論が移った可能性がある。PR #222 のチェックリストで "Spec changes have been discussed on the mailing list or in a linked issue" が**未チェックのまま**なのが気になる点。Issue #193 は "Incorrect mailing list in incubating site" として既にクローズ済みで、ML周りが整備途上であることを示唆する。
+- **GraphQL との関係**についてはリポジトリ内に一切言及がなく、外部発言も確認していない。質問にあった「既存クエリ標準との関係」のうち GraphQL は完全に未確認。
+- **MDX の位置づけ**が仕様上ねじれている（クエリ言語なのに式方言enumに入っている）ことについて、コミュニティで議論された形跡を見つけられなかった。
+- **0.2.0 のリリース予定時期**は未確認。`spec.md` は "before 0.2.0 is released" とだけ書く。
+- **`expression_language.md` の "Proposed Final" というステータス語の正確な定義**が見つからなかった。WG内の承認プロセスにおける段階名と思われるが、定義文書は未確認。
+- Discussion #80 "OSI Specification Version Change"（Announcements、2026-02-27）の中身は未読。バージョニング方針が書かれている可能性がある。
+- **ROADMAP.md の3WG区分と docs/working_groups.md の5WG区分のどちらが現行か**は未確認。Composability WG と Sync API WG の成果物がリポジトリのどこに対応するのかも特定できていない。

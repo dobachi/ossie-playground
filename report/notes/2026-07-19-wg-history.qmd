@@ -1,0 +1,131 @@
+---
+title: "Apache Ossie ワーキンググループ構成の変遷（調査メモ）"
+---
+
+調査日: 2026-07-19
+
+## 結論
+
+**「5つのWG」という数字自体は現在も公式サイト上で有効。ただし記事が挙げていたWG名のリストは誤り。**
+
+一次情報を確認した結果、Ossie には**名前も粒度も異なる2系統の「Working Groups」**が並存していることが判明した。
+
+| 系統 | 出典 | 数 | 性格 |
+|---|---|---|---|
+| A. コミュニティWG | 公式サイト `ossie.apache.org` トップページ「Working Groups」節 | **5** | 実際に会合・リード・チャンネルを持つ活動体 |
+| B. 仕様ロードマップ上の "Current Efforts / Working Groups" | リポジトリの `ROADMAP.md` | **3** | 仕様進化のワークストリーム区分 |
+
+したがって:
+
+- 「5つのWG」→ **系統Aとしては妥当**。公式サイトが2026-05-05以降ずっと5個を掲載しており、2026-07-19時点でも5個のまま。
+- しかし記事が5個の中身として挙げた **「Dataset Abstraction & Logical Modeling」は、系統A・系統Bのいずれにおいても WG として存在したことがない**。これは `ROADMAP.md` の **「Future Efforts」（将来課題）節の筆頭項目**であり、現行WGではない。
+- よって **記事の修正は必要**。ただし「5→3」に直すのではなく、「どちらの5/3の話なのか」を切り分け、Dataset Abstraction を WG 一覧から外すのが正しい修正方向。
+
+---
+
+## WG構成の変遷
+
+### 系統A: 公式サイト掲載のコミュニティWG（5個、現在も継続）
+
+| 日付 | 出来事 | WG数 |
+|---|---|---|
+| 2026-05-05 | `apache/ossie-website` コミット `9041d5be` "Restyle site, consolidate pages, and add partner updates" で `data/home.yml` に `working_groups` 節が新設。5個が初出 | 5 |
+| 2026-06-04 | Financial Services Semantic Working Group（FSI WG）が初会合。ただしトップページの5個リストには追加されていない（updates記事のみ） | 5（＋FSI） |
+| 2026-07-06〜07-11 | ASF移管に伴うサイト改装（`3bc331ec` 他）。WG名の "OSI" が "Apache Ossie" に置換されただけで、**5個の構成・名称は不変** | 5 |
+| 2026-07-19（本日） | `ossie.apache.org` トップページは依然5個 | 5 |
+
+5個の内訳（現行、2026-07-19取得）:
+
+1. Advanced Metrics & Expression Language
+2. Composability
+3. Catalog Integration
+4. Ontology Representation
+5. Model Converters & Developer Tools
+
+出典:
+- https://ossie.apache.org/ （アクセス: 2026-07-19）
+- https://raw.githubusercontent.com/apache/ossie-website/9041d5be/data/home.yml （アクセス: 2026-07-19）
+- https://api.github.com/repos/apache/ossie-website/commits?path=data/home.yml （アクセス: 2026-07-19）
+- 旧サイト https://open-semantic-interchange.org/ も同一の5個を掲載（`open-semantic-interchange.github.io/osi-website` は 301 でこちらへ転送）（アクセス: 2026-07-19）
+
+### 系統B: `ROADMAP.md` の "Current Efforts / Working Groups"
+
+| コミット日 | SHA | メッセージ | Current Efforts の数と内容 |
+|---|---|---|---|
+| 2026-04-22 | `37b712c` | Add community-informed roadmap | **3**: Metric Semantics & Computation Model / Core Semantic Model (Entities, Relationships, Grain) / Catalog Integration & Semantic Services |
+| 2026-04-22 | `b7f5a24` | Add related issues, PRs, and repo artifacts to roadmap | **3**（同上） |
+| 2026-05-05 | `354320a` | Address review feedback: consolidate roadmap sections | **2**: Metric Semantics & Core Semantic Model（上位2つを統合）/ Catalog Integration & Semantic Services |
+| 2026-05-18 | `e8c6f35` | Add ontology section and update roadmap with latest discussions and PRs | **3**: 上記2つ＋ Ontology & Semantic Interoperability を追加 |
+| 2026-05-19 | `ee22bd5` | Remove PR references from roadmap | **3**（同上） |
+| 2026-06-16 | `b1bf415` | Add OrionBelt (OBML) converter | 変更なし（**3**） |
+| 2026-07-13 | `9738b1e` | Welcome Apache Ossie (incubating) | **3**（記事改訂日時点の状態） |
+| 2026-07-14 | `6abd059` / `a7984d1` | docs: fix converter guide links | 変更なし（**3**） |
+
+出典:
+- https://github.com/apache/ossie/commits/main/ROADMAP.md （アクセス: 2026-07-19）
+- 各SHAの raw: `https://raw.githubusercontent.com/apache/ossie/<SHA>/ROADMAP.md` （アクセス: 2026-07-19）
+
+**重要**: `ROADMAP.md` の Current Efforts は一度も4個・5個になったことがない。最大でも3、一時的に2。
+
+### OSI時代（ASF移管前、2025-09〜2026-06）
+
+- 2025-10-17: OSI として最初の公式ワーキングセッションを Snowflake Menlo Park オフィスで開催。この時点では**単一の「OSI working group」**として言及されており、分科WGの列挙はない。AWS, Collibra, DataHub, Domo, Firebolt, Informatica, Instacart, JPMC, Preset, Starburst Data, Strategy が新規参加。
+  - 出典: https://www.snowflake.com/en/blog/osi-initiative-expands-partners/ （投稿日 2025-11-13、アクセス: 2026-07-19）
+- 2026-04-28: 公式サイト updates「OSI Community Update」で「working groups are taking shape」と記載。この頃に分科WG体制が形成された。
+  - 出典: https://open-semantic-interchange.org/updates/ （アクセス: 2026-07-19）
+- 2026-05-05: サイト上に5個のWGリストが初掲載（上記系統A）。
+- 2026-06-04: FSI Semantic Working Group 初会合（業種別の縦割りWG。上記5個とは別枠）。
+  - 出典: https://open-semantic-interchange.org/updates/ 、https://ossie.apache.org/ （アクセス: 2026-07-19）
+
+つまり **OSI時代の後半（2026-05以降）の公称WG数は5であり、ASF移管によってこれが3に減ったという事実はない。**
+
+### ASF移管アナウンスにおける「3」
+
+- 2026-07-08 Snowflakeブログ / 2026-07-10 Ossie公式updates が、いずれも
+  「Three working groups (Metric Language, Catalog and Ontology) operate with dedicated leads, meetings and public channels」と記載。
+  - 出典: https://www.snowflake.com/en/blog/apache-ossie-open-semantic-interchange-incubator/ （投稿日 2026-07-08、アクセス: 2026-07-19）
+  - 出典: https://ossie.apache.org/updates/ossie-enters-apache-incubator/ （投稿日 2026-07-10、アクセス: 2026-07-19）
+
+この「3（Metric Language / Catalog / Ontology）」は `ROADMAP.md` の3つと対応する。
+**同一サイト内でトップページが5個、announcement記事が3個という公式情報間の不整合が存在する**（2026-07-19時点で未解消）。
+
+---
+
+## 「Dataset Abstraction & Logical Modeling」の行方
+
+- 確認できた `ROADMAP.md` の全リビジョン（2026-04-22 の初出から 2026-07-19 現在まで）において、この項目は一貫して **「Future Efforts」節の第1項目**として存在する。Current Efforts に置かれたことはない。
+- 目的: "Decouple semantic definitions from physical storage"（セマンティック定義を物理ストレージから分離）。成果物として論理／物理データセット間のマッピング層、環境をまたぐ再利用可能な定義などを掲げる。
+- 統合も削除もされていない。**現在も Future Efforts として現存**する。
+  - 出典: https://raw.githubusercontent.com/apache/ossie/main/ROADMAP.md 、同 `37b712c` / `b7f5a24` / `e8c6f35` / `ee22bd5` / `9738b1e` 版（アクセス: 2026-07-19）
+
+記事が「独立WTとして現存しない」と扱ったのは結果的に正しいが、理由は「廃止・統合された」ではなく**「もともとWGではなく将来課題だった」**である。
+
+---
+
+## 「5つ」という数字の出所の評価
+
+| 仮説 | 判定 |
+|---|---|
+| 公式サイトの Working Groups 節（Advanced Metrics / Composability / Catalog Integration / Ontology Representation / Model Converters） | **実在。2026-05-05以降現在まで一貫して5個。** これが「5」の唯一の一次的根拠 |
+| `ROADMAP.md` の Current Efforts が一時的に5個だった | **否定**。全履歴で2〜3個 |
+| ROADMAP の Current Efforts 3個 ＋ Future Efforts の一部を混ぜて5個 | 記事が Dataset Abstraction を含めていた点から**この混同が起きた可能性が高い**が、そのような5個リストを掲げた出典は見つからず |
+| ASF移管前は5、移管で3に削減 | **否定**。移管後もサイトは5個のまま |
+
+---
+
+## 記事に対する推奨対応
+
+1. 「5つのWG」という記述自体は残せる。ただし出典を `ossie.apache.org` トップページに明示し、名称を上記5個に置き換える。
+2. 「Dataset Abstraction & Logical Modeling」を WG 一覧から削除し、言及するなら `ROADMAP.md` の Future Efforts 項目として記述する。
+3. 移管アナウンスと `ROADMAP.md` が言う「3つ（Metric Language / Catalog / Ontology）」は仕様ワークストリームであり、サイトの5個とは別カウントである旨を注記するのが最も正確。公式情報間で数が食い違っている事実自体を書いてよい。
+
+---
+
+## 未確認事項
+
+- サイトの5個WGと announcement の3個WGの関係（包含・統廃合・単なるサイト更新漏れ）を説明した一次情報は見つからなかった。dev@ossie.apache.org メーリングリストアーカイブは未調査。
+- 5個のうち "Composability" と "Model Converters & Developer Tools" が現在も実際に会合を開いているかは未確認。announcement が3個しか挙げていないことから、サイトの記載が古い可能性は排除できない。
+- ASF Incubator への正式提案書（Incubator Proposal wiki ページ）に記載されたWG構成は未確認。
+- FSI Semantic Working Group を含めた総数の公称値（6か、それとも別枠か）は未確認。
+- OSI時代の 2025-09〜2026-04 の期間に、5個とは別のWG構成が公表されていた可能性は否定しきれない（当時のサイトスナップショットは `data/home.yml` の履歴上 2026-05-05 以前に working_groups 節が存在せず、Internet Archive での追跡は未実施）。
+- 対象ブログ記事の本文そのものは本調査では参照していない（依頼文中の記述に基づく）。記事が挙げた5個の残り4個が何だったかは未確認。

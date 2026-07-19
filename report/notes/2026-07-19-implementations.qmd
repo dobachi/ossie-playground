@@ -1,0 +1,376 @@
+---
+title: "Apache Ossie (旧 OSI) 実装状況の横断調査"
+---
+
+調査日: 2026-07-19 / すべてのURLは同日アクセス
+
+## 結論の要約
+
+**ベンダー製品として Ossie 対応を公式ドキュメントで確認できたのは2件のみ。**
+
+- **dbt Core v1.12** — import / export 両方、2026-07-16 GA。唯一の本格実装。
+- **Honeydew** — import のみ。しかも問い合わせが必要な有償の別売り製品。
+
+それ以外は「参加表明」または Apache Ossie リポジトリ内のコミュニティ製
+リファレンス変換器であり、製品としての対応は確認できなかった。
+Snowflake・Databricks・Dremio・Cube・Salesforce/Tableau・主要BIツールは
+**いずれも製品ドキュメント上に OSI/Ossie の記載が無い**。
+
+前提として押さえるべき点:
+
+- 仕様そのものがまだ固まっていない。`github.com/apache/ossie` のタグは
+  `osi-0.1.1-rc1` **1個のみ**（リリース候補であって正式リリースではない）。
+  GitHub Releases は未公開。
+- `core-spec/spec.yaml` の `main` は `version: 0.2.0.dev0`、
+  ファイル内に「DRAFT version - in development, schema may change before 0.2.0 is released」
+  とのコメントがある。
+- 一部の二次情報サイトが「OSI v1.0 が 2026-01-27 にリリース」と書いているが、
+  **これは誤り**。公式 updates ページの記述は「OSI Specification v0.1 Released」であり、
+  Snowflake の公式ブログも「first version」としか書いていない（バージョン番号の明記なし）。
+- `ossie.apache.org` は約50〜60の参加組織ロゴを掲載しているが、
+  **実装レジストリや適合性(conformance)一覧は存在しない**。
+- リポジトリの `compliance/` ディレクトリは README 1枚のみで、中身は
+  「This is for compliance tests」の一文だけ。**適合性テストスイートは未実装**。
+
+### 仕様側にまだ無いもの（ROADMAP.md より）
+
+`ROADMAP.md` を読むと、「Write Once, Query Anywhere」を支えるはずの中核部品が
+まだ Current Efforts / Future Efforts、つまり**未完成**であることがわかる。
+
+Current Efforts（現在進行中＝未完了）:
+- 標準メトリクス仕様言語
+- aggregation / relationship / grain セマンティクスの一級市民化
+- 派生メトリクス・累積メトリクスのサポート
+- 明示的なエンティティモデリング
+
+Future Efforts（着手前）:
+- **標準セマンティッククエリ言語**
+- **リファレンス実行エンジン（Ossie → SQL コンパイラ）**
+- **実装間の適合性を検証するテストスイート**
+- ディメンション階層・時間セマンティクスの標準化
+- 論理データセット抽象（物理テーブルからの分離）
+
+ROADMAP の動機説明そのものが現状を率直に述べている。
+「The current model lacks sufficient support for metrics at different grains,
+filters, aggregation semantics, and relationships between metrics.
+Ambiguity in how entities, joins, and grain are represented limits interoperability.」
+
+つまり現時点の Ossie は、**メトリクスの意味論そのものがまだ確定していない**。
+これが後述の変換器の lossy さの根本原因である。
+
+## 一覧表
+
+| ツール / ベンダー | export (自社→Ossie) | import (Ossie→自社) | 成熟度 | 仕様バージョン | 出典 |
+|---|---|---|---|---|---|
+| **dbt Core** | ✅ あり | ✅ あり | **GA**（v1.12.0, 2026-07-16） | import: 0.1.0 / 0.1.1 のみ受理 | [dbt docs](https://docs.getdbt.com/docs/build/osi-semantic-models) |
+| Snowflake | ❌ 製品としては確認できず | ❌ 確認できず | 参加表明のみ | — | [docs.snowflake.com](https://docs.snowflake.com/en/user-guide/views-semantic/overview) |
+| Databricks | ❌ 確認できず | ❌ 確認できず | 参加表明のみ | — | [docs.databricks.com](https://docs.databricks.com/aws/en/business-semantics/metric-views) |
+| Dremio | ❌ 確認できず | ❌ 確認できず | ブログでの言及のみ | — | [docs.dremio.com changelog](https://docs.dremio.com/dremio-cloud/changelog/) |
+| Salesforce / Tableau | △ Ossieリポジトリに双方向変換器 | △ 同左 | 製品機能ではない | jar は `0.1.0-SNAPSHOT` | [converters/salesforce](https://github.com/apache/ossie/tree/main/converters/salesforce) |
+| **Honeydew** | △ 変換器のみ | ✅ 製品ドキュメントあり | 有償の別製品（要問合せ） | 記載なし | [honeydew.ai docs](https://honeydew.ai/docs/migration/import-tools/) |
+| Cube | ❌ ドキュメント上見当たらず | ❌ 同左 | 参加表明のみ | — | [docs.cube.dev](https://docs.cube.dev/docs/integrations/semantic-layer-sync) |
+| BlackRock | ❌ 見当たらず | ❌ 見当たらず | 参加表明のみ（後述の注意点あり） | — | [incubator proposal](https://incubator.apache.org/projects/ossie.html) |
+| GoodData | △ 変換器のみ（メトリクス非対応） | △ 同左 | 製品機能ではない | — | [converters/gooddata](https://github.com/apache/ossie/tree/main/converters/gooddata) |
+| Omni | △ 変換器のみ | △ 同左 | 2026-07-15 追加、PyPI 未公開 | — | [converters/omni](https://github.com/apache/ossie/tree/main/converters/omni) |
+| Apache Superset / Preset | ❌ | ❌ | SIP-182 は OSI 実装ではない | — | [Superset #35003](https://github.com/apache/superset/issues/35003) |
+| ThoughtSpot | ❌ | ❌ | マーケティング上の「align」のみ | — | ドキュメント確認できず |
+| Power BI / Fabric | ❌ | ❌ | 参加自体が確認できず | — | ドキュメント確認できず |
+| Looker / Google | ❌ | ❌ | 不明瞭 | — | ドキュメント確認できず |
+| Sigma / Hex / Atlan / Alation / Select Star | ❌ | ❌ | 参加表明のみ | — | ドキュメント確認できず |
+
+凡例: ✅ = 製品として出荷済み / △ = Ossieリポジトリ内のコミュニティ変換器のみ / ❌ = 確認できず
+
+## 「参加」と「実装」の区別が最重要
+
+`ossie.apache.org` のトップに並ぶ50社超のロゴは **Working Group Contributors Affiliation**、
+つまり作業部会に人を出している組織の一覧であって、製品対応の一覧ではない。
+公式サイト上に実装レジストリは無い。
+
+実装らしきものは大きく2種類に分かれる。混同すると評価を誤る。
+
+1. **ベンダー製品に組み込まれた機能** — 現時点で確認できたのは dbt Core のみ。
+2. **Apache Ossie リポジトリ内のリファレンス変換器** (`converters/`) —
+   ASF リポジトリに置かれたコミュニティ製の CLI であり、
+   該当ベンダーが自社製品として出荷したものではない。
+   ユーザーが自分でビルドして実行する必要がある。
+
+`converters/` 配下に存在するディレクトリ:
+`dbt` / `gooddata` / `honeydew` / `omni` / `orionbelt` / `polaris` / `salesforce` / `snowflake`
+
+`converters/README.md` は各変換器に export（Ossie→ベンダー形式）と
+import（ベンダー形式→Ossie）の双方向を求めているが、
+**成熟度の表明（alpha/beta/production 等）は一切書かれていない**。
+また Databricks は変換対象として名前が挙がっているのに
+**ディレクトリ自体が存在しない**。Dremio も同様に存在しない。
+
+### リファレンス変換器8件の実態
+
+リポジトリを clone して各 README を確認した結果。
+**すべての変換器が何らかの非可逆性を明記している**。
+
+| 変換器 | 方向 | 主な制約 |
+|---|---|---|
+| dbt | 双方向 | lossy。conversion funnel / private メトリクス / natural key が落ちる |
+| snowflake | **一方向のみ**（Ossie→Cortex Analyst YAML） | 「production では注意して使え」と明記。Semantic Views 非対応 |
+| salesforce | 双方向 | jar は `0.1.0-SNAPSHOT`。スキーマJSONの手動コピーが必要 |
+| gooddata | 双方向 | **メトリクスを変換しない**（GoodData の MAQL と Ossie の SQL モデルが根本的に異なるため） |
+| honeydew | 双方向 | Ossie に型情報が無いためヒューリスティック推論。perspectives / domains は変換不可 |
+| omni | 双方向 | Omni→Ossie→Omni は lossless だが、それは `custom_extensions` に退避しているため |
+| polaris | 双方向 | 対象は Apache Polaris（Icebergカタログ）。型をヒューリスティック推論 |
+| orionbelt | 双方向 | **OSI v0.2.0.dev0 を対象**。MDX/TABLEAU/MAQL メトリクスは lossy |
+
+ここから読み取れる重要な点が3つある。
+
+1. **GoodData 変換器はメトリクスを一切変換しない。**
+   メトリクス交換を掲げる標準において、これは象徴的な限界。
+   計算モデルが SQL 式ベースでないツールは現行仕様に乗らない。
+2. **「lossless」を謳う Omni も、実体はベンダー固有情報を `custom_extensions` に
+   退避しているだけ。** 同一ベンダーの往復は無損失でも、
+   ベンダー間の移送では退避した情報は相手が解釈できない。
+   つまり lossless なのは round-trip であって interchange ではない。
+3. **バージョンが既に分裂している。**
+   dbt は `0.1.0` / `0.1.1` しか受理しない（それ以外はパースエラー）一方、
+   orionbelt は `0.2.0.dev0` を出力する。
+   現時点でこの2つは相互運用できない。
+
+## 各ツールの詳細
+
+### dbt / dbt Labs — 唯一の実動実装（import + export, GA）
+
+現時点で唯一、製品として両方向を出荷している。
+
+**import（Ossie → dbt）**
+- プロジェクトルートの `OSI/` ディレクトリに OSI 形式の `.json` を置くと、
+  dbt がネイティブの semantic model と並べて manifest にパースする。
+- ディレクトリは `dbt_project.yml` の `osi-paths` で変更可能。
+- 受理する仕様バージョンは **`0.1.0` と `0.1.1` のみ**。
+  それ以外のバージョン文字列はパースエラーになる。
+- 制約: OSI の dataset source は dbt の model に解決される必要がある
+  （source / seed / snapshot / external table は不可）。
+
+**export（dbt → Ossie）**
+- パース時に `target/` へ `osi_document.json` を `semantic_manifest.json` と並べて出力する。
+- 実装は dbt-core PR #12955（2026-05-15 マージ、issue #12786 を解決、マイルストーン v1.12）。
+- 変換は metricflow の `MSIToOSIConverter` を利用。
+- 変換器が要素を落とす／劣化させる場合、`MFConverterIssue`（I078）イベントで警告を出す。
+
+**成熟度**: dbt-core **v1.12.0 が 2026-07-16 に GA**。
+b1〜b3、rc1〜rc3 を経て正式リリース済みで、OSI 対応も preview ラベルは付いていない。
+なお本調査日の 3日前 に GA になったばかりである点は割り引いて読む必要がある。
+
+**変換の非可逆性（重要）**: `converters/dbt/README.md` は MSI→Ossie 変換が
+**lossy** であると明記している。落ちるもの:
+- conversion funnel メトリクス（Ossie に該当型が無い）
+- private メトリクス（Ossie に可視性修飾子が無い）
+- natural key エンティティ（Ossie に該当型が無い）
+- window / grain のセマンティクスは Ossie の式文字列に移せない（基本集計のみ保持）
+
+逆方向（Ossie→MSI）は "best-effort" で、
+「Ossie は MSI より構造情報が少ない」と明記されている。
+つまり「Write Once, Query Anywhere」は現仕様では完全には成立していない。
+
+出典:
+- https://docs.getdbt.com/docs/build/osi-semantic-models
+- https://docs.getdbt.com/docs/dbt-versions/core-upgrade/upgrading-to-v1.12
+- https://github.com/dbt-labs/dbt-core/pull/12955
+- https://github.com/dbt-labs/dbt-core/issues/12786
+- https://github.com/apache/ossie/tree/main/converters/dbt
+- https://github.com/dbt-labs/dbt-core/releases
+
+### Snowflake — 製品対応は確認できず
+
+Ossie/OSI を主導した当事者だが、**製品ドキュメントに OSI 対応の記述が無い**。
+semantic views のドキュメントおよび 2026年のフィーチャーリリースノートを直接確認したが、
+OSI / Ossie への言及は見つからなかった。
+
+実際に出荷されている semantic view の入出力機能は、すべて独自形式か他社形式である:
+- `SYSTEM$READ_YAML_FROM_SEMANTIC_VIEW`（Snowflake 独自 YAML）
+- `SYSTEM$CREATE_SEMANTIC_VIEW_FROM_YAML`
+- `SYSTEM$EXPORT_TDS_FROM_SEMANTIC_VIEW`（Tableau TDS 形式、**Preview**、2026-03-05）
+- Autopilot は Tableau エクスポートや Power BI の `.pbit` / `.pbix` を取り込める
+
+Ossie リポジトリには `converters/snowflake` が存在するが、
+- 方向は **一方向のみ**（Ossie → Snowflake Cortex Analyst semantic YAML）
+- 対象は Cortex Analyst 用 YAML であって **Semantic Views ではない**
+- オフラインの Python スクリプト
+- README に「under active development... has not been thoroughly tested against all edge cases — use with caution in production」と明記
+- relationship の `ai_context` を落とす lossy 変換
+
+出典:
+- https://docs.snowflake.com/en/user-guide/views-semantic/overview
+- https://docs.snowflake.com/en/release-notes/feature-releases-2026
+- https://docs.snowflake.com/en/release-notes/2026/other/2026-03-05-semantic-views-tableau-tds
+- https://github.com/apache/ossie/tree/main/converters/snowflake
+
+### Databricks — 確認できず
+
+Unity Catalog metric views のドキュメント、YAML シンタックスリファレンス、
+機能提供状況ページ、2025〜2026年の SQL リリースノートのいずれにも
+OSI / Ossie の言及なし。
+
+注意: Databricks ドキュメント内の "export" は
+ダッシュボードローカルの metric view を Unity Catalog に昇格させる操作を指し、
+OSI とは無関係。
+
+根拠として存在するのは「OSI イニシアチブに参加し積極的に貢献している」と述べた
+ブログのみ。Ossie リポジトリに `converters/databricks` は**存在しない**
+（README では変換対象として名前が挙がっているにもかかわらず）。
+
+出典:
+- https://docs.databricks.com/aws/en/business-semantics/metric-views
+- https://docs.databricks.com/aws/en/business-semantics/metric-views/yaml-reference
+
+### Dremio — 確認できず（4社中もっとも実体が薄い）
+
+Dremio Cloud の changelog（2025-11-12〜2026-07-14 の範囲を確認）および
+semantic layer ドキュメントに OSI / Ossie の出現はゼロ。
+Ossie リポジトリにも Dremio 用変換器は無い。
+確認できたのは Apache への改名を再announceするマーケティングブログのみ。
+
+出典:
+- https://docs.dremio.com/dremio-cloud/changelog/
+- https://docs.dremio.com/dremio-cloud/help-support/well-architected-framework/self-serve-semantic-layer/
+- https://www.dremio.com/blog/apache-ossie-incubating-the-new-name-for-open-semantic-interchange/
+
+### Salesforce / Tableau — 製品機能ではないが、コードとしては最も充実
+
+`help.tableau.com` の Tableau Semantics ドキュメントにも、
+Salesforce の Tableau Semantics Layer API ガイド（Authoring API / Semantic Query API）にも、
+OSI / Ossie への言及や import/export エンドポイントは無い。
+
+一方で Ossie リポジトリの `converters/salesforce` は
+**双方向**（Ossie YAML ↔ Salesforce Semantic Model JSON）で、
+converters 配下では最も完成度が高い。ただし:
+- Java / Maven 実装、jar のバージョンは `0.1.0-SNAPSHOT`
+- ビルド前にユーザーが Salesforce のドキュメントページから
+  スキーマ JSON を手動でコピーしてくる必要がある
+- ASF リポジトリ内の自前ビルド CLI であり、Salesforce の製品機能ではない
+
+Salesforce はイニシアチブの共同リードだが、それはガバナンス上の役割であって製品対応ではない。
+
+出典:
+- https://developer.salesforce.com/docs/data/semantic-layer/guide/get-started.html
+- https://help.tableau.com/current/pro/desktop/en-us/examples_tableau_semantics.htm
+- https://github.com/apache/ossie/tree/main/converters/salesforce
+
+### Honeydew — 製品ドキュメントで確認できた唯一のもう1件
+
+`honeydew.ai/docs/migration/import-tools/` に
+「Convert an Open Semantic Interchange semantic model to Honeydew semantics」と記載があり、
+**import（OSI → Honeydew）が製品ドキュメントに存在する**。
+変換対象は datasets / relationships / fields / metrics / AI context metadata。
+
+ただし重要な留保が2つある。
+
+- GA / preview のラベルは無い。
+- 同ページ冒頭に「Import Tools are a standalone product.
+  Please contact support@honeydew.ai in order to use.」とあり、
+  **セルフサービスで使える機能ではなく、問い合わせが必要な別売り製品**。
+
+export 方向は製品ドキュメントでは確認できず、
+Ossie リポジトリの `converters/honeydew`（双方向）に依存する。
+
+出典: https://honeydew.ai/docs/migration/import-tools/
+
+### Cube — 製品ドキュメントに OSI の記載なし
+
+Cube は launch 時から参加を表明し、ブログで
+「Cube から OSI を読み書きするオープンアダプタを提供する」と述べていた。
+しかし Semantic Layer Sync の製品ドキュメントを確認したところ、
+**OSI / Ossie への言及は無い**。
+同機能が対応する連携先は Apache Superset / Preset / Tableau の3つのみ
+（Tableau は Enterprise プランのみ）。
+
+また **Ossie リポジトリにも Cube 用変換器は存在しない**。
+つまりブログでの表明から約10か月、コードとしての成果物が確認できない。
+
+出典: https://docs.cube.dev/docs/integrations/semantic-layer-sync
+
+### BlackRock — 「創設メンバー」の扱いに注意
+
+Snowflake のプレスリリースは OSI を「co-led by ... BlackRock」と記述している。
+しかし Apache Incubator のプロジェクトページに掲載された initial committers
+（JB Onofré, Khushboo Bhatia, Lior Ebel, Quigley Malcolm, Russell Spitzer,
+Will Pugh, Dianne Wood, Jochen Christ, Nechama Deutsch, Kurt Stirewalt,
+Tian Gao, Celeste Hogan, Josh Klahr, Markus Weimer）に
+**BlackRock 所属者は含まれていない**。
+リポジトリのコミット履歴にも `@blackrock.com` ドメインからのコミットは無い。
+
+記事で扱う際は「co-lead」を事実として断定せず、
+**Snowflake のプレスリリース上の表現として帰属させる**のが安全。
+実装成果物は確認できない。
+
+出典: https://incubator.apache.org/projects/ossie.html
+
+### Apache Superset / Preset — SIP-182 は OSI 実装ではない
+
+2025-10-15 に Preset が「SIP-182 で Superset にセマンティックレイヤー対応を追加」と
+announce したため OSI 実装と誤解されやすいが、別物である。
+
+- SIP-182（issue #35003）は 2026-06-22 に completed でクローズ済み
+- しかし `apache/superset` 全体をコード検索しても
+  `ossie` / `open semantic interchange` のヒットは **0件**
+- 実体は Superset を SQLAlchemy から切り離すためのベンダー非依存の
+  `Explorable` プロトコル。Cube や MetricFlow には言及するが OSI には言及しない
+- Preset のパートナーページは未来形で
+  「We're working to ensure Preset and Apache Superset can both export and
+  import semantic definitions in the OSI format」と書いている
+
+つまり Superset 側は「OSI を受け入れられる土台の整備」であって OSI 対応そのものではない。
+
+### コントリビューターの偏り
+
+リポジトリの直近100コミットの投稿者ドメイン分布:
+gmail 26 / relational.ai 15 / honeydew.ai 15 / noreply 14 / apache.org 9 /
+web.de 6 / snowflake.com 4 / dbtlabs.com 4。
+
+microsoft / google / blackrock / atlan / alation / selectstar / cube / sigma
+のドメインからのコミットは**確認できない**。
+実際にコードを書いているのは小規模なセマンティックレイヤーベンダー2社
+（RelationalAI, Honeydew）と個人コントリビューターが中心である。
+
+なお `converters/orionbelt` の OrionBelt はベンダー製品ではなく
+Ralf Becher 氏による個人OSS、`converters/polaris` は Apache Polaris
+（Iceberg カタログ）であり、いずれも BI ベンダーの実装ではない。
+
+## 未確認事項
+
+- **私的プレビュー(private preview)の可能性**: 定義上ドキュメント化されないため、
+  各ベンダーがゲート付きで OSI 対応を提供している可能性は排除できない。
+- **検索インデックスの遅延**: ごく最近（数週間以内）公開されたドキュメントページが
+  捕捉できていない可能性。各社の changelog / リリースノートのインデックスページを
+  直接 fetch して確認したが、完全ではない。
+- `converters/` 配下の各変換器が実際に Ossie の TPC-DS リファレンスモデルを
+  ラウンドトリップできるか（動作検証）は未実施。
+- 仕様 0.2.0 で破壊的変更が入る見込みだが、その内容と時期は未確認。
+- dbt v1.12 GA は調査日の3日前であり、実運用での安定性報告はまだ存在しない。
+
+### 「無い」ことの証明の弱さについて（重要）
+
+本調査の否定的結論の大半は「ベンダーの公式ドキュメントを検索したが記載が無かった」
+という形の証拠であり、**不在の証明は本質的に弱い**。
+以下の各行は「確認できず（no documentation found）」であって
+「対応していないことが確定した」ではない。記事化の際は表現に注意。
+
+- Cube / Sigma / Hex / GoodData / Omni / ThoughtSpot / Power BI / Looker
+
+特に記事の主張の根拠として重い位置を占める行については、
+公開前にベンダー自身のドキュメントで再確認することを推奨する。
+一方、dbt・Honeydew・Snowflake・Databricks・Dremio・Superset については
+changelog / リリースノートのインデックスページを直接取得して確認しており、
+相対的に確度は高い。
+
+### 調査プロセス上の注意
+
+本調査ではベンダー横断の一次情報収集に補助エージェントを併用した。
+そのうち1つが初回報告で**存在しない検索結果を捏造**していたことが
+自己申告により判明したため、当該報告に含まれていた具体的数値
+（ドキュメントのヒット数、ThoughtSpot のリリース番号、Omni の changelog 日付範囲等）は
+すべて破棄した。
+
+本ファイルに残した内容は、
+(a) 筆者が直接 fetch / clone して確認したもの、
+(b) URL 付きで追試可能な形で報告され、かつ主要な項目については
+筆者が独立に再取得して裏を取ったもの（Honeydew, Cube, Incubator ページ）
+に限定している。
+それでも上記「不在の証明」の限界は残る。

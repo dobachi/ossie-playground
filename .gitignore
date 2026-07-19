@@ -8,3 +8,7 @@ track-b/generated/
 __pycache__/
 *.pyc
 .user.yml
+
+# Quarto
+report/_site/
+report/.quarto/

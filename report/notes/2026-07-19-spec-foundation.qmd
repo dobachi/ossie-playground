@@ -1,0 +1,246 @@
+---
+title: "仕様の基礎（一次読解）"
+---
+
+`core-spec/spec.md` を通読した結果。**動作確認のソースはこの文書とする。**
+
+- リポジトリ: https://github.com/apache/ossie
+- 固定コミット: `07be0176e48af67f0b46e0957a87a154586abf38`（2026-07-17）
+- 読解日: 2026-07-19
+
+対象ファイル:
+
+| ファイル | 位置づけ |
+| --- | --- |
+| `core-spec/osi-schema.json`（330行） | **規範。JSON Schema draft 2020-12。機械可読** |
+| `core-spec/spec.md`（594行） | 散文の仕様書。表形式の説明 |
+| `core-spec/spec.yaml` | 未読 |
+| `core-spec/expression_language.md`（35KB） | 2026-07-15 追加。別途扱う |
+| `validation/validate.py`（290行） | 参照実装のバリデータ。上記スキーマを読む |
+
+**規範は `osi-schema.json` である。** 散文と食い違う場合はスキーマを優先する。
+
+以下、行番号は上記コミット時点のもの。
+
+## バージョンの状態
+
+| バージョン | 状態 | 日付 |
+| --- | --- | --- |
+| `0.2.0.dev0` | **Unreleased**。"Schema is mutable; do not depend on this version in production" | — |
+| `0.1.1` | Initial release | 2025-12-11 |
+
+`spec.md` 冒頭（L22）にも "**DRAFT version** — in development, schema may change before 0.2.0 is released" とある。
+
+つまり **2026-07-19 時点でリリース済みの仕様は 0.1.1 のみ**。`main` ブランチが示すのは未確定の開発版である。
+
+なお Version History に `0.1.0` の記載はない。0.1.1 が "Initial release" とされている。
+
+## 構造
+
+トップレベルは `semantic_model`（配列）。その下に `datasets` / `relationships` / `metrics`。
+
+### Semantic Model (L62-92)
+
+| フィールド | 必須 | 備考 |
+| --- | --- | --- |
+| `name` | Yes | |
+| `datasets` | Yes | |
+| `description` / `ai_context` / `relationships` / `metrics` / `custom_extensions` | No | |
+
+### Datasets (L96-151)
+
+| フィールド | 必須 | 備考 |
+| --- | --- | --- |
+| `name` | Yes | |
+| `source` | Yes | 物理テーブル参照（`database.schema.table`）またはクエリ |
+| `primary_key` | No | 単一・複合いずれも配列で表現 |
+| `unique_keys` | No | 配列の配列 |
+| `fields` | No | |
+
+`source` が物理層との唯一の接合点。
+
+### Fields (L203-260)
+
+| フィールド | 必須 | 備考 |
+| --- | --- | --- |
+| `name` | Yes | |
+| `expression` | Yes | 方言対応のオブジェクト |
+| `dimension` | No | **`is_time` のみ** |
+| `label` / `description` / `ai_context` / `custom_extensions` | No | |
+
+**重要な点が2つある。**
+
+1. **フィールドに measure（メジャー）の概念はない。** スキーマに `measure` キーは存在しない。
+   フィールドはあくまで「グルーピング・フィルタ・メトリクス式で使う行レベル属性」であり、
+   集約は `metrics` 側の責務。
+2. **フィールド式は集約を含んではならない。** L237 に "Use scalar SQL expressions (no aggregations)" と明記。
+
+`dimension` が持つ情報は `is_time` の真偽のみ。**数値か文字列かといった型情報を仕様は運ばない。**
+消費側は物理テーブルのスキーマか、独自の推論に頼ることになる。
+
+### Metrics (L308-360)
+
+| フィールド | 必須 | 備考 |
+| --- | --- | --- |
+| `name` | Yes | |
+| `expression` | Yes | 方言対応のオブジェクト |
+| `description` / `ai_context` / `custom_extensions` | No | |
+
+セマンティックモデルレベルで定義され、複数データセットにまたがれる。
+式はデータセット修飾付き（`SUM(orders.amount)`）で書かれている。
+フィールド式が裸のカラム名なのと対照的。
+
+### Expression Object
+
+```yaml
+expression:
+  dialects:
+    - dialect: ANSI_SQL
+      expression: "customer_id"
+```
+
+方言 enum は7種（L48-60）: `ANSI_SQL` / `SNOWFLAKE` / `MDX` / `TABLEAU` / `DATABRICKS` / `MAQL` / `BIGQUERY`。
+
+同一フィールド・メトリクスに複数方言の式を併記できる。**方言間の変換は仕様の責務ではない。**
+書き手が各方言の式を用意する前提の設計。
+
+### Relationships (L155-199)
+
+`from`（多側）→ `to`（一側）を `from_columns` / `to_columns` の配列で結ぶ。
+順序が対応し、要素数が一致する必要がある。複合キー対応。
+
+### Custom Extensions (L364-)
+
+`vendor_name` と任意のJSON文字列 `data` の組。ベンダー固有情報の退避先。
+**コア互換性を壊さずに拡張するための仕組みだが、裏返せばここに入った情報は
+他ベンダーには解釈されない。**
+
+## 仕様内の不整合
+
+**Metrics セクションの Expression Object 定義と、直後の Examples が食い違っている。**
+
+定義（L326-331）:
+
+```yaml
+expression:
+  dialects:
+  - dialect: ANSI_SQL
+    expression: "..."
+```
+
+Examples（L338-341, L352-355）:
+
+```yaml
+- name: total_revenue
+  expression:
+    - dialect: ANSI_SQL
+      expression: SUM(orders.amount)
+```
+
+例示側には `dialects:` キーがなく、`expression` が直接配列になっている。
+規範的スキーマに従うなら例示が誤り。
+
+なお `examples/tpcds_semantic_model.yaml` は定義側（`expression.dialects`）に従っている。
+
+## 公式サンプルのバージョン
+
+| ファイル | 宣言バージョン |
+| --- | --- |
+| `examples/flights.yaml` | `0.2.0.dev0` |
+| `examples/tpcds_semantic_model.yaml` | `"0.2.0.dev0"` |
+
+**いずれも「本番で依存するな」とされる未リリース版を宣言している。**
+リリース済みの 0.1.1 に準拠した公式サンプルは存在しない。
+
+また両ファイルとも YAML であり、JSON 版は提供されていない。
+
+## 0.1.1 と 0.2.0.dev0 の差分
+
+タグ `osi-0.1.1-rc1` 時点の `core-spec/spec.md`（565行）と `main`（594行）を比較した。
+**差分は73行で、コアスキーマは実質的に変わっていない。**
+
+実質的な変更は以下の3点のみ。
+
+### 1. `vendor_name` が閉じた列挙から自由文字列へ
+
+0.1.1 は `Vendors` という規範的な enum を持ち、`vendor_name` は
+"Must be from vendors enum" と制約されていた（`COMMON` / `SNOWFLAKE` /
+`SALESFORCE` / `DBT` / `DATABRICKS` / `GOODDATA`）。
+
+0.2.0.dev0 では enum が廃止され "Free-form string identifying the vendor" になった。
+同じ一覧は「well-known examples」という**非規範的な参考情報**として残り、
+`HONEYDEW` が追加されている。
+
+コア仕様を変更せずにベンダーが拡張を定義できるようにする意図と説明されている。
+
+### 2. `BIGQUERY` 方言の追加
+
+Dialects enum に `BIGQUERY`（GoogleSQL）が加わり、6種から7種になった。
+
+### 3. 記述の修正
+
+`expessions` → `expressions`、`datsets` → `datasets` のタイポ修正。
+ASFライセンスヘッダの追加。表題の "OSI" → "Apache Ossie" 改称。
+
+### 4. スキーマがバージョン文字列を `const` で固定している
+
+**これが最も重要な差分である。**
+
+| スキーマ | `properties.version` |
+| --- | --- |
+| `osi-0.1.1-rc1` の `osi-schema.json` | `{"type": "string", "const": "0.1.1"}` |
+| `main` の `osi-schema.json` | `{"type": "string", "const": "0.2.0.dev0"}` |
+
+`enum` でも `pattern` でもなく `const`。ルートの `required` は
+`["version", "semantic_model"]` で、`version` は必須である。
+
+### 5. ルート直下の `dialects` / `vendors` が削除された
+
+**当初この差分を見落としていた。散文の `spec.md` はルート直下のこれらを
+記述していないため、散文の差分では現れない。JSON Schema を直接比較して判明した。**
+
+| スキーマ | ルートで許されるプロパティ |
+| --- | --- |
+| 0.1.1 | `version`, **`dialects`**, **`vendors`**, `semantic_model` |
+| 0.2.0.dev0 | `version`, `semantic_model` |
+
+いずれもルートは `additionalProperties: false`。
+したがって 0.1.1 で妥当だったルート直下の `dialects` を持つ文書は、
+0.2.0.dev0 では**スキーマ違反になる**。
+
+この差分は実害を出している。動作確認 V6 を参照。
+
+### 含意
+
+`$defs` の比較では、`SemanticModel` / `Dataset` / `Field` / `Metric` /
+`Relationship` などエンティティ定義は**すべて同一**である。
+差分は `Dialect`（`BIGQUERY` 追加）と `Vendor`（enum → 自由文字列）のみ。
+
+構造上の実質的な変更はルート直下の `dialects` / `vendors` 削除に限られる。
+にもかかわらず、各スキーマは自分のバージョン文字列だけを受け付ける。
+
+つまり **構造的に両バージョンで妥当な文書であっても、
+両方のスキーマを同時に満たすことは定義上不可能**である。
+バージョン文字列は互換性の表明ではなく、排他的な識別子として機能している。
+
+これが実装側にどう波及するかを動作確認で確かめる（検証項目1）。
+
+## この基礎から導かれる検証すべき主張
+
+動作確認で確かめる対象。詳細は `2026-07-19-verification-plan.md` に落とす。
+
+1. リリース版 0.1.1 と、公式サンプルが宣言する 0.2.0.dev0 の間で、
+   実装が相互運用できるか
+2. 型情報を持たない `dimension`（`is_time` のみ）を、消費側がどう解釈するか
+3. `metrics` の集約式が、消費側のモデルにどう写像されるか
+4. 仕様が定めていない前提（消費側固有の要件）がどれだけ必要になるか
+5. 方言併記を書き手が用意する設計が、実際にどう機能するか
+
+## 未確認事項
+
+- `validation/` `compliance/` `cli/` `python/` ディレクトリは未読。
+  特に `validation/` に機械可読スキーマ（JSON Schema 等）があれば、
+  本文書の表形式の読解より優先されるべき規範となる
+- 消費側（dbt など）が仕様のどこまでを実装しているかは本文書の対象外。
+  実装側のドキュメントは別途読む必要がある
+- `ontology/` は別系統のモデリング言語であり本文書の対象外

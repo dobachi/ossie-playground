@@ -1,0 +1,75 @@
+---
+title: "初期調査メモ (2026-07-19)"
+---
+
+軽い一次情報あたり。深掘り前の地ならし。
+
+## 確定した事実
+
+出典は `../resources.md` 参照。Tier 1（ASF公式・プロジェクト公式）で裏が取れたものだけを挙げる。
+
+### インキュベーション
+
+| 項目 | 内容 |
+|---|---|
+| 入り日 | 2026年6月22日 |
+| Champion | JB Onofré (jbonofre) |
+| Mentors | JB Onofré, Holden Karau, Zili Chen, Russell Spitzer |
+| 初期コミッター | 14名 |
+| サイト | https://ossie.apache.org/ |
+| リポジトリ | https://github.com/apache/ossie |
+| 課題管理 | GitHub Issues |
+
+2026年6月下旬にインフラ（ML・Git・課題管理）のセットアップ完了。
+
+### 改名の理由
+
+「Open Semantic Interchange」の略称 OSI が、OSSエコシステム内の他プロジェクトと
+紛らわしいためコミュニティが改名を決定。**仕様そのものに変更はない**。
+
+補足: OSI は Open Source Initiative および Open Systems Interconnection と衝突する。
+さらに "OSSIE" は Virginia Tech 由来の SDR フレームワーク（SCA実装）と同名。
+改名で1つ解消したが完全にユニークではない点は記事で触れる価値あり。
+
+### コミュニティ規模
+
+- 2025年11月のリポジトリ公開以降、100+ commits / 35 merged PR
+- コントリビューター所属: Snowflake, Dremio, Salesforce, Databricks, dbt Labs ほか
+- 参加組織は創設17社 → 50+ 社
+- コントリビューター 50+ 名
+
+### ASFガバナンス下で変わること
+
+- パブリックMLでの議論
+- 仕様変更は formal discussion-and-vote プロセス
+- コミッター権は**所属企業ではなく貢献で得る**
+- 単一企業の支配がない状態でのベンダー中立標準化
+
+## 要確認・未解決
+
+### ⚠️ 既発記事との齟齬（優先度：高）
+
+既発記事の考察に「**5つの WG**」とあるが、現在の ROADMAP.md および ASF移管アナウンスは
+いずれも「**3つ**」としている。
+
+現在の3WG:
+1. Metric Semantics & Core Semantic Model
+2. Catalog Integration & Semantic Services
+3. Ontology & Semantic Interoperability
+
+既発記事が言及する「Dataset Abstraction & Logical Modeling」は独立WGとして現存しない。
+1番目に統合された可能性が高いが**未確認**。
+
+→ 事実なら既発記事の修正が要る。新記事を書く前にここを確定させたい。
+
+### 未調査
+
+- ASFとしての**正式リリース**を出したか。v0.1系は移管前のもので、ASF Release は
+  IPMC投票が要る。podling の初回リリースが済んでいるかは未確認
+- 卒業（TLP化）の見通しと、podling として満たすべき条件の現状
+- Apache Polaris 連携の具体像（カタログ統合WGの中心的な話題らしい）
+- ロードマップ項目の中身: expression language, windowing functions,
+  platform converters, standardized semantic query specification
+- 実装状況の最新。既発記事執筆時は dbt Core の import が動く段階だった。
+  Snowflake / Cube / Dremio / BI各社の export/import 対応の進捗
+- ASF移管が実装投資を実際に加速させたか（移管の効果検証）

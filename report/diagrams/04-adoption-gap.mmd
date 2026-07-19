@@ -1,0 +1,23 @@
+flowchart TB
+    A["参加組織<br/>50社以上<br/>Snowflake・Databricks・Salesforce<br/>Oracle・Atlan・Alation ほか"]:::wide
+    B["仕様リポジトリ内のコンバータ<br/>8本<br/>dbt / gooddata / honeydew / omni<br/>orionbelt / polaris / salesforce / snowflake<br/>（全て 0.2.0.dev0 対象・未リリース）"]:::mid
+    C["製品として動く実装<br/>2件"]:::narrow
+
+    C1["dbt Core 1.12<br/>import + export<br/>2026-07-16 GA"]:::impl
+    C2["Honeydew<br/>import のみ<br/>有償・要問い合わせ"]:::impl
+
+    A --> B --> C
+    C --> C1
+    C --> C2
+
+    N1["カタログ製品3社<br/>Atlan・Alation・Select Star<br/>表明のみ。実際に出荷しているのは<br/>Snowflake 固有の semantic view /<br/>Cortex Analyst 対応"]:::note
+    N2["Superset SIP-182<br/>master にマージ済みだが未リリース<br/>かつ OSI 対応ではない"]:::note
+
+    A -.-> N1
+    A -.-> N2
+
+    classDef wide fill:#e8eef7,stroke:#5b6b7f
+    classDef mid fill:#eef2e8,stroke:#6b7f5b
+    classDef narrow fill:#e8f0e8,stroke:#2d6a3f,stroke-width:2px
+    classDef impl fill:#f4faf4,stroke:#2d6a3f
+    classDef note fill:#fdf0f0,stroke:#c0392b,color:#8b0000
