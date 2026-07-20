@@ -21,7 +21,7 @@ title: "はじめに"
 調査範囲と限界（@sec-method）、再現手順（@sec-reproduce）を明示している。
 :::
 
-![両岸から橋を架けようとして、まだ中央で接続していない——本レポートが描く Apache Ossie の現在地（概念図）](diagrams/gen-02-cover-unfinished-bridge.png){#fig-cover}
+![両岸から多くの手で橋を架けている途中——中央はまだ接続していないが、作業は進んでいる。本レポートが描く Apache Ossie の現在地（概念図）](diagrams/gen-02-cover-unfinished-bridge.png){#fig-cover}
 
 Apache Ossie（旧 Open Semantic Interchange, OSI）は、セマンティック層の
 ベンダー中立標準である。2026年6月22日に Apache Incubator 入りし、
