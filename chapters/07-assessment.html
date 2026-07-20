@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="ja" xml:lang="ja"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="Apache Ossie（旧 Open Semantic Interchange）を一次情報と動作確認で調べた記録">
+
+<title>8&nbsp; 評価と展望 – Apache Ossie 調査レポート</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../appendix/method.html" rel="next">
+<link href="../chapters/06-verification.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dark-0a6b7249c26820e032cb0bd839ff02b1.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-69b13ec1193f68ecb2036cf9d40a6ff3.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-fa0d4df022e900dec590332e394616b3.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-69b13ec1193f68ecb2036cf9d40a6ff3.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "一致なし",
+    "search-matching-documents-text": "一致した文書",
+    "search-copy-link-title": "検索へのリンクをコピー",
+    "search-hide-matches-text": "追加の検索結果を非表示",
+    "search-more-match-text": "追加の検索結果",
+    "search-more-matches-text": "追加の検索結果",
+    "search-clear-button-title": "消去",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "取消",
+    "search-submit-button-title": "検索",
+    "search-label": "サーチ"
+  }
+}</script>
+
+
+</head>
+
+<body class="nav-sidebar floating quarto-light"><script id="quarto-html-before-body" type="application/javascript">
+    const toggleBodyColorMode = (bsSheetEl) => {
+      const mode = bsSheetEl.getAttribute("data-mode");
+      const bodyEl = window.document.querySelector("body");
+      if (mode === "dark") {
+        bodyEl.classList.add("quarto-dark");
+        bodyEl.classList.remove("quarto-light");
+      } else {
+        bodyEl.classList.add("quarto-light");
+        bodyEl.classList.remove("quarto-dark");
+      }
+    }
+    const toggleBodyColorPrimary = () => {
+      const bsSheetEl = window.document.querySelector("link#quarto-bootstrap:not([rel=disabled-stylesheet])");
+      if (bsSheetEl) {
+        toggleBodyColorMode(bsSheetEl);
+      }
+    }
+    const setColorSchemeToggle = (alternate) => {
+      const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
+      for (let i=0; i < toggles.length; i++) {
+        const toggle = toggles[i];
+        if (toggle) {
+          if (alternate) {
+            toggle.classList.add("alternate");
+          } else {
+            toggle.classList.remove("alternate");
+          }
+        }
+      }
+    };
+    const toggleColorMode = (alternate) => {
+      // Switch the stylesheets
+      const primaryStylesheets = window.document.querySelectorAll('link.quarto-color-scheme:not(.quarto-color-alternate)');
+      const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
+      manageTransitions('#quarto-margin-sidebar .nav-link', false);
+      if (alternate) {
+        // note: dark is layered on light, we don't disable primary!
+        enableStylesheet(alternateStylesheets);
+        for (const sheetNode of alternateStylesheets) {
+          if (sheetNode.id === "quarto-bootstrap") {
+            toggleBodyColorMode(sheetNode);
+          }
+        }
+      } else {
+        disableStylesheet(alternateStylesheets);
+        enableStylesheet(primaryStylesheets)
+        toggleBodyColorPrimary();
+      }
+      manageTransitions('#quarto-margin-sidebar .nav-link', true);
+      // Switch the toggles
+      setColorSchemeToggle(alternate)
+      // Hack to workaround the fact that safari doesn't
+      // properly recolor the scrollbar when toggling (#1455)
+      if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
+        manageTransitions("body", false);
+        window.scrollTo(0, 1);
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+          manageTransitions("body", true);
+        }, 40);
+      }
+    }
+    const disableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        stylesheet.rel = 'disabled-stylesheet';
+      }
+    }
+    const enableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        if(stylesheet.rel !== 'stylesheet') { // for Chrome, which will still FOUC without this check
+          stylesheet.rel = 'stylesheet';
+        }
+      }
+    }
+    const manageTransitions = (selector, allowTransitions) => {
+      const els = window.document.querySelectorAll(selector);
+      for (let i=0; i < els.length; i++) {
+        const el = els[i];
+        if (allowTransitions) {
+          el.classList.remove('notransition');
+        } else {
+          el.classList.add('notransition');
+        }
+      }
+    }
+    const isFileUrl = () => {
+      return window.location.protocol === 'file:';
+    }
+    const hasAlternateSentinel = () => {
+      let styleSentinel = getColorSchemeSentinel();
+      if (styleSentinel !== null) {
+        return styleSentinel === "alternate";
+      } else {
+        return false;
+      }
+    }
+    const setStyleSentinel = (alternate) => {
+      const value = alternate ? "alternate" : "default";
+      if (!isFileUrl()) {
+        window.localStorage.setItem("quarto-color-scheme", value);
+      } else {
+        localAlternateSentinel = value;
+      }
+    }
+    const getColorSchemeSentinel = () => {
+      if (!isFileUrl()) {
+        const storageValue = window.localStorage.getItem("quarto-color-scheme");
+        return storageValue != null ? storageValue : localAlternateSentinel;
+      } else {
+        return localAlternateSentinel;
+      }
+    }
+    const toggleGiscusIfUsed = (isAlternate, darkModeDefault) => {
+      const baseTheme = document.querySelector('#giscus-base-theme')?.value ?? 'light';
+      const alternateTheme = document.querySelector('#giscus-alt-theme')?.value ?? 'dark';
+      let newTheme = '';
+      if(authorPrefersDark) {
+        newTheme = isAlternate ? baseTheme : alternateTheme;
+      } else {
+        newTheme = isAlternate ? alternateTheme : baseTheme;
+      }
+      const changeGiscusTheme = () => {
+        // From: https://github.com/giscus/giscus/issues/336
+        const sendMessage = (message) => {
+          const iframe = document.querySelector('iframe.giscus-frame');
+          if (!iframe) return;
+          iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
+        }
+        sendMessage({
+          setConfig: {
+            theme: newTheme
+          }
+        });
+      }
+      const isGiscussLoaded = window.document.querySelector('iframe.giscus-frame') !== null;
+      if (isGiscussLoaded) {
+        changeGiscusTheme();
+      }
+    };
+    const authorPrefersDark = false;
+    const darkModeDefault = authorPrefersDark;
+      document.querySelector('link#quarto-text-highlighting-styles.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+      document.querySelector('link#quarto-bootstrap.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+    let localAlternateSentinel = darkModeDefault ? 'alternate' : 'default';
+    // Dark / light mode switch
+    window.quartoToggleColorScheme = () => {
+      // Read the current dark / light value
+      let toAlternate = !hasAlternateSentinel();
+      toggleColorMode(toAlternate);
+      setStyleSentinel(toAlternate);
+      toggleGiscusIfUsed(toAlternate, darkModeDefault);
+      window.dispatchEvent(new Event('resize'));
+    };
+    // Switch to dark mode if need be
+    if (hasAlternateSentinel()) {
+      toggleColorMode(true);
+    } else {
+      toggleColorMode(false);
+    }
+  </script>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="サイドバーを切り替える" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../chapters/07-assessment.html"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">評価と展望</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="サイドバーを切り替える" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="サーチ" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Apache Ossie 調査レポート</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/dobachi/ossie-playground" title="Source Code" class="quarto-navigation-tool px-1" aria-label="Source Code"><i class="bi bi-github"></i></a>
+  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="ダークモードの切り替え"><i class="bi"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="サーチ"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">はじめに</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/01-situation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">状況の整理</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/02-what-is-ossie.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Ossie とは何か</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/03-specification.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">仕様の詳細</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/04-governance.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">ASF移管とガバナンス</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/05-ecosystem.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">エコシステムの現状</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/06-verification.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">動作確認</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/07-assessment.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">評価と展望</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="セクションを切り替え">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendix/method.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">調査方法と範囲</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendix/reproduce.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">B</span>&nbsp; <span class="chapter-title">動作確認の再現手順</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendix/resources.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">C</span>&nbsp; <span class="chapter-title">情報源一覧</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">目次</h2>
+   
+  <ul>
+  <li><a href="#現在地" id="toc-現在地" class="nav-link active" data-scroll-target="#現在地"><span class="header-section-number">8.1</span> 現在地</a>
+  <ul class="collapse">
+  <li><a href="#運用規約の未整備" id="toc-運用規約の未整備" class="nav-link" data-scroll-target="#運用規約の未整備"><span class="header-section-number">8.1.1</span> (1) 運用規約の未整備</a></li>
+  <li><a href="#仕様そのものの設計上の制約" id="toc-仕様そのものの設計上の制約" class="nav-link" data-scroll-target="#仕様そのものの設計上の制約"><span class="header-section-number">8.1.2</span> (2) 仕様そのものの設計上の制約</a></li>
+  <li><a href="#エコシステムの薄さ" id="toc-エコシステムの薄さ" class="nav-link" data-scroll-target="#エコシステムの薄さ"><span class="header-section-number">8.1.3</span> (3) エコシステムの薄さ</a></li>
+  <li><a href="#見通し" id="toc-見通し" class="nav-link" data-scroll-target="#見通し"><span class="header-section-number">8.1.4</span> 見通し</a></li>
+  </ul></li>
+  <li><a href="#運営の側から見ると" id="toc-運営の側から見ると" class="nav-link" data-scroll-target="#運営の側から見ると"><span class="header-section-number">8.2</span> 運営の側から見ると</a></li>
+  <li><a href="#導入判断" id="toc-導入判断" class="nav-link" data-scroll-target="#導入判断"><span class="header-section-number">8.3</span> 導入判断</a></li>
+  <li><a href="#何を見ていれば状況が分かるか" id="toc-何を見ていれば状況が分かるか" class="nav-link" data-scroll-target="#何を見ていれば状況が分かるか"><span class="header-section-number">8.4</span> 何を見ていれば状況が分かるか</a></li>
+  <li><a href="#総括" id="toc-総括" class="nav-link" data-scroll-target="#総括"><span class="header-section-number">8.5</span> 総括</a></li>
+  <li><a href="#本レポートの限界" id="toc-本レポートの限界" class="nav-link" data-scroll-target="#本レポートの限界"><span class="header-section-number">8.6</span> 本レポートの限界</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span id="sec-assessment" class="quarto-section-identifier"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">評価と展望</span></span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>本章は前章までの観察を総合したものであり、新規の事実提示はほとんど行わない。 各主張の根拠は、参照先として示した章と、そこから辿れる出典にある。</p>
+<section id="現在地" class="level2" data-number="8.1">
+<h2 data-number="8.1" class="anchored" data-anchor-id="現在地"><span class="header-section-number">8.1</span> 現在地</h2>
+<p>掲げられている「Write Once, Query Anywhere」は、まだ実現していない。</p>
+<p>動作確認では、同じ dbt を挟んだ往復——公式エクスポータの出力を 出荷版インポータが読む——が成立しなかった。 しかも原因が3つ独立に立つため、どれか1つを直しても通らない （<a href="06-verification.html#sec-verification-roundtrip" class="quarto-xref"><span>セクション 7.3</span></a>）。</p>
+<p>一方で、リリース版に準拠して手で書いた文書は、 公式バリデータを通り、dbt に取り込まれ、実行まで到達している。 <strong>経路そのものは存在する。</strong></p>
+<p>観測された障害は性質が異なる3種類に分かれ、 それぞれ解けやすさが違う。</p>
+<section id="運用規約の未整備" class="level3" data-number="8.1.1">
+<h3 data-number="8.1.1" class="anchored" data-anchor-id="運用規約の未整備"><span class="header-section-number">8.1.1</span> (1) 運用規約の未整備</h3>
+<ul>
+<li>バージョン文字列を <code>const</code> で固定した結果、構造的にほぼ同じ文書が相互に排除される</li>
+<li>公式コンバータが 0.1.1 時代の構造に 0.2.0.dev0 のラベルを貼っている</li>
+<li><code>source</code> の識別子クォートの扱いを仕様が定めていない</li>
+</ul>
+<p>これらは<strong>仕様の設計を変えずに解消できる</strong>種類である。 バージョンの進め方、コンバータの追随、識別子表記の規定といった 取り決めを揃えれば片付く。</p>
+</section>
+<section id="仕様そのものの設計上の制約" class="level3" data-number="8.1.2">
+<h3 data-number="8.1.2" class="anchored" data-anchor-id="仕様そのものの設計上の制約"><span class="header-section-number">8.1.2</span> (2) 仕様そのものの設計上の制約</h3>
+<p>一方、次の2つは規約では解けない。</p>
+<ul>
+<li><strong><code>dimension</code> が <code>is_time</code> しか持たず、型情報を運ばない。</strong> 数値と文字列が区別できない（<a href="06-verification.html#sec-verification-loss" class="quarto-xref"><span>セクション 7.4</span></a>）</li>
+<li><strong>フィールドレベルの measure を持たない設計が、消費側のモデルと噛み合わない。</strong> OSI は集約を <code>metrics</code> の式として持つが、MetricFlow は measure への参照を前提とする。 結果として集約関数が写像で脱落する</li>
+</ul>
+<p>これらは仕様を変更しなければ解決せず、しかも<strong>どう変更すべきかが難しい</strong>。</p>
+<p>型情報を運ぶ欄を足すのは一見簡単に見えるが、 どこまで型を持たせるかは設計判断である。物理層の型をそのまま写すのか、 論理的な型を別に定めるのか、消費側に推論させるのか。 <a href="03-specification.html#sec-spec-open-questions" class="quarto-xref"><span>セクション 4.8</span></a> で見た「構造化するか、消費側に委ねるか」という軸が、 ここでも効いてくる。</p>
+<p>metrics と measures の置き場所はさらに難しい。 既存の主要な実装が揃って一方を採っているなかで、 Ossie が別の設計を選んでいる。どちらにも理由があり、 ワーキンググループでも結論が出ていない。</p>
+</section>
+<section id="エコシステムの薄さ" class="level3" data-number="8.1.3">
+<h3 data-number="8.1.3" class="anchored" data-anchor-id="エコシステムの薄さ"><span class="header-section-number">8.1.3</span> (3) エコシステムの薄さ</h3>
+<p>製品として動く実装が2件のみで、うち1件は有償・要問い合わせ。 取り込んだメトリクスをローカルでクエリする手段さえない。</p>
+<p>これは (1)(2) の結果でもあり、原因でもある。実装が増えなければ 規約の不備も設計の噛み合わなさも表面化せず、修正されない。</p>
+</section>
+<section id="見通し" class="level3" data-number="8.1.4">
+<h3 data-number="8.1.4" class="anchored" data-anchor-id="見通し"><span class="header-section-number">8.1.4</span> 見通し</h3>
+<ol type="1">
+<li><p>は取り決めの問題なので、時間と手当てで解ける見込みがある。</p></li>
+<li><p>は設計判断を要する。<strong>技術的にも難しい問題</strong>であり、 時間をかければ自然に解けるものではない。 そして難しい設計判断ほど、それを決める場が機能しているかどうかに左右される。</p></li>
+</ol>
+</section>
+</section>
+<section id="運営の側から見ると" class="level2" data-number="8.2">
+<h2 data-number="8.2" class="anchored" data-anchor-id="運営の側から見ると"><span class="header-section-number">8.2</span> 運営の側から見ると</h2>
+<p><a href="04-governance.html" class="quarto-xref"><span>チャプター 5</span></a> の観察と重ねると、もう一つの面が見えてくる。</p>
+<p><strong>運営の仕組みは、まだ立ち上がっている途中である。</strong></p>
+<ul>
+<li>ASF 移管から4週間。Apache Release はまだなく、署名鍵も未登録</li>
+<li>仕様変更の [VOTE] は実行された記録がない</li>
+<li>仕様の議論は GitHub Discussions で行われ、 中核的な意味論の一部は Google Docs と Slack にある</li>
+<li>ML のアーカイブにも不備がある（プロジェクト側も認識している）</li>
+</ul>
+<p>これらは、<strong>移管から日が浅いことを踏まえて読む必要がある</strong>。 ASF のガバナンスに沿った運営が定着するには通常それなりの期間を要し、 incubation 初期の podling が同様の状態にあることは珍しくない。 mentor から是正が入る典型的な段階でもある。</p>
+<p>そのうえで、<a href="01-situation.html" class="quarto-xref"><span>チャプター 2</span></a> で見た 「ワーキンググループ一覧が公式内で3系統に食い違う」という現象や、 バージョン管理の食い違いは、<strong>何を正とするかが定まりきっていない</strong>ことの表れと見える。</p>
+<p>0.1.1 と 0.2.0.dev0 のどちらを基準にするのか、 コンバータはどちらに追随するのか、公式サンプルはどちらで書かれるべきか。 これらは技術的な難問ではなく、決めれば済むことである。 決める場の整備が追いついていない、という順序で理解するのが妥当だろう。</p>
+</section>
+<section id="導入判断" class="level2" data-number="8.3">
+<h2 data-number="8.3" class="anchored" data-anchor-id="導入判断"><span class="header-section-number">8.3</span> 導入判断</h2>
+<p><strong>現時点で本番採用する理由は乏しい。</strong></p>
+<ul>
+<li>製品として動く実装は2件のみ（dbt Core 1.12、Honeydew）</li>
+<li>仕様のリリース版は 0.1.1 だが、公式サンプルもコンバータもそちらを向いていない</li>
+<li>取り込み時に型情報と集約関数が落ちる。しかもローカルでクエリ検証する手段がない</li>
+<li>カタログ統合（Polaris）は 501 のまま</li>
+</ul>
+<p>一方で、<strong>注視する価値はある</strong>。直近数週間で実質的な変化が続いているためだ。</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>日付</th>
+<th>出来事</th>
+<th>参照</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>2026-06-22</td>
+<td>ASF Incubator 入り</td>
+<td><a href="04-governance.html" class="quarto-xref"><span>チャプター 5</span></a></td>
+</tr>
+<tr class="even">
+<td>以降4週間</td>
+<td>merged PR 32本（それ以前は月5本程度）</td>
+<td><a href="04-governance.html" class="quarto-xref"><span>チャプター 5</span></a></td>
+</tr>
+<tr class="odd">
+<td>2026-07-15</td>
+<td><code>expression_language.md</code> が <code>main</code> に追加</td>
+<td><a href="03-specification.html#sec-expression-language" class="quarto-xref"><span>セクション 4.7</span></a></td>
+</tr>
+<tr class="even">
+<td>2026-07-16</td>
+<td>dbt Core 1.12 で import + export が GA</td>
+<td><a href="05-ecosystem.html" class="quarto-xref"><span>チャプター 6</span></a></td>
+</tr>
+</tbody>
+</table>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">ノート</span>このレポートは古びやすい
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>上記の最後の2件は、本調査（2026-07-19）の3〜4日前の出来事である。 これは「動きが速い」ことの証拠というより、 <strong>本レポートが短期間で陳腐化しうる</strong>ことを意味する。</p>
+<p>特に <a href="06-verification.html" class="quarto-xref"><span>チャプター 7</span></a> の結果は、 <code>dbt-metricflow</code> の対応バージョンが変われば、 あるいは公式コンバータの出力が修正されれば、そのまま覆る。</p>
+</div>
+</div>
+<p>現実的な向き合い方としては、以下が妥当だろう。</p>
+<ul>
+<li><strong>今すぐ乗るのではなく、自社のセマンティックモデルを Ossie で表現できる形に保っておく</strong>。仕様の構造は素直で、 dbt / Cube / LookML などから機械的に写像できる範囲にある</li>
+<li>特定ベンダーのセマンティック層に固有機能で深く依存しない。 依存する場合は <code>custom_extensions</code> に落ちる部分がどこかを把握しておく</li>
+<li><a href="05-ecosystem.html#sec-uc-comparison" class="quarto-xref"><span>セクション 6.4</span></a> で見たとおり、中立性を取れば速度は落ちる。 今必要な機能があるなら、単一ベンダーの実装を選ぶのは合理的な判断でありうる</li>
+</ul>
+</section>
+<section id="何を見ていれば状況が分かるか" class="level2" data-number="8.4">
+<h2 data-number="8.4" class="anchored" data-anchor-id="何を見ていれば状況が分かるか"><span class="header-section-number">8.4</span> 何を見ていれば状況が分かるか</h2>
+<p>技術・運営の両面が絡むため、片方だけを見ても状況は掴めない。 以下は、いずれも公開情報から判定できる指標である。</p>
+<p><strong>ガバナンス</strong></p>
+<ol type="1">
+<li><strong>初回の Apache Release が出るか。</strong> PGP 署名鍵の登録が前段階になる</li>
+<li><strong>仕様変更が ML の [VOTE] を通るようになるか。</strong> 所属に関係なく反対意見が検討され、理由付きの合意が記録されれば、中立な運営の実証になる</li>
+<li><strong>Google Docs と Slack にある決定がリポジトリへ戻るか</strong></li>
+<li>8月以降の月次 podling report の内容（mentor の応答性・リリース計画）</li>
+<li>創設企業以外からの committer 昇格</li>
+</ol>
+<p><strong>技術・エコシステム</strong></p>
+<ol start="6" type="1">
+<li><strong>0.1.1 と 0.2.0.dev0 の分裂が解消されるか。</strong> 具体的には、公式サンプルとコンバータがリリース版を向くか、 あるいは 0.2.0 が正式リリースされるか</li>
+<li><strong>公式コンバータの出力が公式バリデータを通るようになるか</strong>（現状は通らない）</li>
+<li><code>dbt-metricflow</code> が dbt-core 1.12 系に対応し、 取り込んだメトリクスをクエリできるようになるか</li>
+<li>Polaris の <code>ENABLE_SEMANTIC_MODELS</code> が default true になり、 リリース版に入るか</li>
+<li>dbt と Honeydew 以外の3例目の実装が出るか</li>
+</ol>
+</section>
+<section id="総括" class="level2" data-number="8.5">
+<h2 data-number="8.5" class="anchored" data-anchor-id="総括"><span class="header-section-number">8.5</span> 総括</h2>
+<p>Ossie が取り組んでいる問題——指標定義の断片化——は実在する。 AI エージェントが指標を参照して判断を下すようになれば、 定義の不一致は気づかれないまま下流へ伝播する（<a href="02-what-is-ossie.html" class="quarto-xref"><span>チャプター 3</span></a>）。 共通の記述形式を持つ価値は上がっている。</p>
+<p><strong>2026年7月時点では、標準として依拠できる段階にはない。</strong> 理由は一つではなく、少なくとも3つが重なっている。</p>
+<p><strong>技術的な難しさ。</strong> 型情報をどこまで仕様に持たせるか、 集約の定義をどこに置くか、方言差をどう吸収するかは、 いずれも設計判断を要する問題である。 既存のセマンティック層が別々の答えを出してきたことからも分かるとおり、 自明な正解はない。概念的相互運用に至っては、 プロジェクト自身が未解決と認めている。</p>
+<p><strong>運営の未成熟。</strong> 何を正とするかを決める場が、まだ機能しきっていない。 バージョン管理や公式コンバータの食い違いは、 技術的に難しいからではなく、決めて揃える工程が追いついていないために生じている。</p>
+<p><strong>エコシステムの薄さ。</strong> 実装が2件にとどまるため、 仕様の不備も設計の噛み合わなさも表面化しにくい。 実装が増えれば問題は顕在化し、修正の圧力もかかる。</p>
+<p>3つは互いに絡んでいる。技術的に難しい判断ほど合意形成の場を要し、 場が整わなければ判断は先送りされ、実装は増えない。</p>
+<p>ASF への移管は、このうち運営の側に効く手当てである。 方向としては妥当で、受入プロセスに外部のレビューが挟まることも確認できた。 ただし移管から4週間で成果を判定するのは早い。</p>
+<p><strong>判定の材料が揃うのは、8月以降の月次 podling report と、 初回 Apache Release の頃になるだろう。</strong></p>
+</section>
+<section id="本レポートの限界" class="level2" data-number="8.6">
+<h2 data-number="8.6" class="anchored" data-anchor-id="本レポートの限界"><span class="header-section-number">8.6</span> 本レポートの限界</h2>
+<ul>
+<li>2026-07-19 の一時点のスナップショットである。この分野の動きは速い</li>
+<li>動作確認の消費側は dbt Core 1.12 のみ。Honeydew は有償・要問い合わせのため入手できず、 他の実装は存在しない</li>
+<li>メトリクスの実行時挙動は確認できていない（<a href="06-verification.html" class="quarto-xref"><span>チャプター 7</span></a>）</li>
+<li>否定的な結論は不在の証明であり本質的に弱い。調査範囲は <a href="../appendix/method.html" class="quarto-xref"><span>付録 A</span></a> に明示した</li>
+<li>筆者は Ossie の開発に関与しておらず、 ML や Slack の非公開のやりとりを見ていない</li>
+</ul>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    // Ensure there is a toggle, if there isn't float one in the top right
+    if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
+      const a = window.document.createElement('a');
+      a.classList.add('top-right');
+      a.classList.add('quarto-color-scheme-toggle');
+      a.href = "";
+      a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
+      const i = window.document.createElement("i");
+      i.classList.add('bi');
+      a.appendChild(i);
+      window.document.body.appendChild(a);
+    }
+    setColorSchemeToggle(hasAlternateSentinel())
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "コピーしました");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "コピーしました");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/dobachi\.github\.io\/ossie-playground\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+            // target, if specified
+            link.setAttribute("target", "_blank");
+            if (link.getAttribute("rel") === null) {
+              link.setAttribute("rel", "noopener");
+            }
+            // default icon
+            link.classList.add("external");
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../chapters/06-verification.html" class="pagination-link" aria-label="動作確認">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">動作確認</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../appendix/method.html" class="pagination-link" aria-label="調査方法と範囲">
+        <span class="nav-page-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">調査方法と範囲</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>調査日 2026-07-19</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+<p><a href="https://github.com/dobachi/ossie-playground">ossie-playground</a></p>
+</div>
+  </div>
+</footer>
+
+
+
+
+</body></html>

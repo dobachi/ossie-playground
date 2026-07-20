@@ -1,0 +1,781 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Apache Ossie 調査レポート",
+    "section": "",
+    "text": "0.1 調査の動機\nApache Ossie（旧 Open Semantic Interchange, OSI）は、セマンティック層の ベンダー中立標準である。2026年6月22日に Apache Incubator 入りし、 OSI から Apache Ossie に改名した。\n本レポートは、この標準が 2026年7月時点で実際にどこまで使えるのかを、 一次情報の読解と動作確認の両面から確かめた記録である。\nSnowflake が主導し50社超が参加、Apache 財団に移管——という見出しだけを追うと、 セマンティック層の標準化が着々と進んでいるように見える。\n一方で、実際に触ろうとすると最初につまずく。どのバージョンを見ればいいのか、 公式サンプルはなぜ動かないのか、参加企業のうち何社が実装しているのか。 公開情報を追うだけでは、この種の問いに答えが出ない。\nそこで、仕様を一次読解したうえで実際に動かし、宣伝と実態の差を測ることにした。",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>はじめに</span>"
+    ]
+  },
+  {
+    "objectID": "index.html#何を調べたか",
+    "href": "index.html#何を調べたか",
+    "title": "Apache Ossie 調査レポート",
+    "section": "0.2 何を調べたか",
+    "text": "0.2 何を調べたか\n4つの軸で調査し、そのうえで動作確認で裏を取った。\n\nASF 移管のガバナンス面 — リリース・卒業見通し・ベンダー中立性の実態（チャプター 5）\n仕様の技術的中身 — 規範・データモデル・式言語・未決の設計論点（チャプター 4）\nエコシステムの現状 — 「参加」と「実装」の落差、カタログ統合（チャプター 6）\n動作確認 — dbt を相手に実際に取り込ませる（チャプター 7）\n\n動作確認は、リリース版 0.1.1 と開発版 0.2.0.dev0 の両方で行った。 両者は揃っているツールチェーンが異なるため、別トラックとして設計している。",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>はじめに</span>"
+    ]
+  },
+  {
+    "objectID": "index.html#事実の扱い",
+    "href": "index.html#事実の扱い",
+    "title": "Apache Ossie 調査レポート",
+    "section": "0.3 事実の扱い",
+    "text": "0.3 事実の扱い\n\n出典は Tier 1（ASF公式・仕様リポジトリ）／Tier 2（プロジェクト広報）／ Tier 3（ベンダー発信・業界メディア）に区別し、事実関係は Tier 1 で裏を取った\n個別の事実には出典の URL とアクセス日を付した。 ただしすべての記述を網羅できてはいない。 出典が明示されていない箇所については、 各章の冒頭に示した参照元（仕様の固定コミット、動作確認の結果ファイル）を辿ってほしい\n確認できなかったことは「未確認」と明記した。特に否定的な結論 （「対応していない」）は不在の証明であり、本質的に弱い。その旨を都度断っている\n動作確認は固定コミット（07be0176）に対して行った。上流が変われば結果も変わりうる\n英文の引用には筆者による和訳を添えた\n\n調査の手順、参照した文献の範囲、否定的結論の限界は 付録 A にまとめた。",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>はじめに</span>"
+    ]
+  },
+  {
+    "objectID": "index.html#本レポートの構成",
+    "href": "index.html#本レポートの構成",
+    "title": "Apache Ossie 調査レポート",
+    "section": "0.4 本レポートの構成",
+    "text": "0.4 本レポートの構成\nチャプター 2 では、本題に入る前に状況そのものを整理する。 名前・バージョン・ワーキンググループ一覧のいずれもが分裂しており、 これを片付けないと以降の議論が読めないためである。\nチャプター 3 で Ossie が解こうとしている問題とスコープを、 チャプター 4 で仕様の中身を扱う。\nチャプター 5 と チャプター 6 が調査の中心で、 それぞれ運営体制と実装状況の実態を扱う。\nチャプター 7 が動作確認、チャプター 8 が総括である。\n付録に、調査の方法と範囲（付録 A）、動作確認の再現手順（付録 B）、 情報源の一覧（付録 C）を収めた。 本文の主張を検証したい場合は、そこから一次情報を辿れる。",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>はじめに</span>"
+    ]
+  },
+  {
+    "objectID": "index.html#再現について",
+    "href": "index.html#再現について",
+    "title": "Apache Ossie 調査レポート",
+    "section": "0.5 再現について",
+    "text": "0.5 再現について\n動作確認の環境は同じリポジトリのルートにある。必要なのは docker だけ。 手順は 付録 B を参照。",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>はじめに</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/01-situation.html",
+    "href": "chapters/01-situation.html",
+    "title": "2  状況の整理",
+    "section": "",
+    "text": "2.1 名前が3つある\nApache Ossie を調べようとすると、技術の中身に入る前に どれを見ればいいのか分からないという壁に当たる。 名前・バージョン・ワーキンググループのいずれもが分裂しているためだ。\n本章はその地形を先に片付ける。以降の章はここを前提とする。\n改名の理由は公式に明言されている。OSI という略称が他プロジェクトと紛らわしいためで、 仕様そのものに変更はない1。\nただし改名後の “Ossie” も完全に一意ではない。Virginia Tech 由来の SDR（Software Defined Radio）フレームワーク OSSIE と同名である。\n検索するときは注意が要る。「OSI」で引くと Open Source Initiative の記事が大量に混ざり、 2026年6月以前の記事は旧名で書かれている。",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>状況の整理</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/01-situation.html#名前が3つある",
+    "href": "chapters/01-situation.html#名前が3つある",
+    "title": "2  状況の整理",
+    "section": "",
+    "text": "呼称\n何を指すか\n\n\n\n\nOpen Semantic Interchange (OSI)\n2025年9月の発足時の名称。旧サイトや初期の記事はこれ\n\n\nApache Ossie (incubating)\n2026年6月22日の Apache Incubator 入りに伴う現名称\n\n\nOSI（別物）\nOpen Source Initiative、Open Systems Interconnection",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>状況の整理</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/01-situation.html#バージョンが2つありどちらも中途半端",
+    "href": "chapters/01-situation.html#バージョンが2つありどちらも中途半端",
+    "title": "2  状況の整理",
+    "section": "2.2 バージョンが2つあり、どちらも中途半端",
+    "text": "2.2 バージョンが2つあり、どちらも中途半端\n調べるうえで最も混乱しやすいのがここである。\n\n\n\n\n\n\n図 2.1: 0.1.1 と 0.2.0.dev0 という2つの世界\n\n\n\n0.1.1 は 2025-12-11 リリースの唯一のリリース版。 出荷版 dbt が受理するのはこちらである。 しかし公式サンプルもコンバータも存在しない。\n0.2.0.dev0 は main ブランチの開発版。仕様本文に明記がある。\n\nSchema is mutable; do not depend on this version in production\n（スキーマは変わりうる。このバージョンに本番で依存しないこと。）\n\nしかし公式サンプル2本もリポジトリ内のコンバータ8本も、すべてこちらを対象としている。\nつまり「動く実装がある方」には手本がなく、「手本がある方」には動く実装がない。\nこの非対称が実害を生んでいることは チャプター 7 で示す。\n\n2.2.1 ASF としての正式リリースは存在しない\nさらに前提として、Apache Release は1本も出ていない。 3つの独立した一次情報が一致する2。\n\nClutch ページが “No releases currently available”（利用可能なリリースなし）かつ “No PGP Signing Keys”（PGP 署名鍵なし）。 署名鍵すら未登録であり、そもそも Apache Release を出せる状態にない\ndist.apache.org/repos/dist/release/incubator/ に ossie ディレクトリが存在しない\nGitHub の Releases は空\n\n存在するタグは osi-0.1.1-rc1 ただ1つ。プレフィックスが osi- のままである点が重要で、 改名前・ASF 移管前に打たれたタグである。ASF のリリースプロセス （PPMC 投票 → IPMC 投票 → dist への配置）を通っておらず、 -rc1 の通りリリース候補止まりで正式リリースですらない。\nしたがって 「v0.1 系は Apache Release ではない」。\n\n\n2.2.2 「v1.0」表記は誤りではない — 後から番号が下げられた\nベンダーブログや技術メディアが仕様を「v1.0」と表記していることがある3。 現在の仕様に 1.0 というバージョンは存在しないため、 これを誇張表現と受け取ってしまうかもしれない。実際にはそうではない。\n仕様リポジトリの履歴を追うと、仕様は実際に Version: 1.0 を名乗っていた。\n\n\n\n期間\ncore-spec/spec.md の宣言\n\n\n\n\n2025-12-12 〜 2026-01-16 以降\n1.0\n\n\n2026-03-09 〜 2026-04-20\n0.1.1\n\n\n2026-05-19 以降\n0.2.0.dev0\n\n\n\n2026年1月27日の仕様公開時点で、仕様は 1.0 だった。 各社はそれを正確に引用していたにすぎない。\n番号を下げたのは以下のコミットである4。\n\n2af09b2（2026-03-09、Khushboo Bhatia） — “Version change from 1.0 to 0.1.1” （バージョンを 1.0 から 0.1.1 へ変更）\n3f22030（2026-05-19、同） — “Bump version to 0.2.0.dev0 on main” （main のバージョンを 0.2.0.dev0 へ引き上げ）。 コミットメッセージに「release/0.1.1 を切って tag を打ったので、main は 破壊的変更を受け入れる開発版とする。main の利用者が リリース済みの 0.1.1 と取り違えないようにするため」とある\n\n\n\n\n\n\n\n重要読み解き\n\n\n\n1.0 という完成を示唆する番号を、後から 0.1.1 へ引き下げたという事実は、 それ自体が状況を物語る。ASF 移管を前に、成熟度の表明を実態に合わせたと読める （ただし引き下げの理由はコミットメッセージに書かれておらず、動機は未確認）。\nしたがって「v1.0」と書かれた記事を見たら、それは 2026年3月以前の情報である可能性が高い。誤りではないが、古い。\n現在の正しい理解は「リリース済みは 0.1.1 のみ、main は 0.2.0.dev0」であり、 これはプロジェクト自身のドキュメントの記述 （“current version: 0.2.0.dev0, latest released: 0.1.1” ＝現行版は 0.2.0.dev0、最新のリリース版は 0.1.1）とも一致する。",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>状況の整理</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/01-situation.html#ワーキンググループの一覧が3系統ある",
+    "href": "chapters/01-situation.html#ワーキンググループの一覧が3系統ある",
+    "title": "2  状況の整理",
+    "section": "2.3 ワーキンググループの一覧が3系統ある",
+    "text": "2.3 ワーキンググループの一覧が3系統ある\n公式情報の中に、粒度も名称も異なる3つの一覧が並存している。\n\n\n\n出典\n数\n内容\n\n\n\n\ndocs/working_groups.md\n5\nMetric Language and Relationships / Composability / Catalog / Ontology / Sync API\n\n\n公式サイト トップページ\n5\nAdvanced Metrics & Expression Language / Composability / Catalog Integration / Ontology Representation / Model Converters & Developer Tools\n\n\nROADMAP.md の Current Efforts\n3\nMetric Semantics & Core Semantic Model / Catalog Integration & Semantic Services / Ontology & Semantic Interoperability\n\n\nIncubator 入りアナウンス\n3\n“Three working groups (Metric Language, Catalog and Ontology)”\n\n\n\nリポジトリ内のファイルはコミット 07be0176（2026-07-17）時点、 サイト側はいずれもアクセス日 2026-07-19 の内容である。\n実態に最も近いのは1つ目である。\n\n\n\n\n\n\n\n\nワーキンググループ\nリード\nSlack チャンネル\n\n\n\n\nMetric Language and Relationships\nWill Pugh\n#metric-language-working-group\n\n\nComposability\nDianne Wood（AtScale）\n#wg-composability\n\n\nCatalog\nShubham Bhargav（Atlan）\n#wg-catalog\n\n\nOntology\nKurt Stirewalt（RelationalAI）\n#osi-ontology\n\n\nSync API\nFrancois Lopitaux（ThoughtSpot）\n#wg-sync-api\n\n\n\n各グループにリード担当者と Slack チャンネルが割り当てられており、 実際に会合が回っているのはこの単位であると判断した。 なお同ファイルのカレンダーリンクはいずれも “link TBD” のままで、 会合日程は公開されていない。\nROADMAP.md にはこれとは別に「Future Efforts」7項目があり、 こちらは着手前の構想である。\n\nDataset Abstraction & Logical Modeling\nSemantic Query Language & Reference Engine\nSQL Dialect, Expressions, and Execution Boundaries\nDimensions, Hierarchies, and Time Semantics\nAI-Native Semantic Layer\nGovernance, Identity, and Validation\nIndustry / Domain-Specific Semantic Models\n\n\n\n\n\n\n\nノート起こりやすい取り違え\n\n\n\nCurrent Efforts の3件と Future Efforts の7件を一列に並べ、 「10個のワーキンググループがある」と紹介している記事がある。 筆者自身の過去記事がそうだった5。\nROADMAP の全リビジョンを追った限り、Current Efforts は 3 → 2 → 3 と推移しており、 一度も4件以上になっていない。したがって 将来構想を現行の作業と取り違えたものと思われる。\nただし断定は避けたい。当該記事の執筆時点で ROADMAP がどう見えていたかを 完全には再現できておらず、また節の見出しが “Current Efforts / Working Groups” と “Future Efforts” で 視覚的に紛らわしいという事情もある。\n\n\nこの不整合は2026年7月時点で解消されていない。 実際に動いているワークストリームを知りたければ、 リード担当者と Slack チャンネルが明記された docs/working_groups.md を見るのが確実である。",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>状況の整理</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/01-situation.html#まとめ",
+    "href": "chapters/01-situation.html#まとめ",
+    "title": "2  状況の整理",
+    "section": "2.4 まとめ",
+    "text": "2.4 まとめ\n本章で押さえた前提を再掲する。\n\n現名称は Apache Ossie。2026年6月以前の情報は OSI の名で書かれている\nリリース済みの仕様は 0.1.1 のみ。main が示す 0.2.0.dev0 は 本番依存を禁ずる旨が明記された開発版\nApache Release は1本も出ていない。「v1.0」は実在しない\nワーキンググループの一覧は公式内で3系統に分かれている。 実態は docs/working_groups.md の5件",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>状況の整理</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/01-situation.html#footnotes",
+    "href": "chapters/01-situation.html#footnotes",
+    "title": "2  状況の整理",
+    "section": "",
+    "text": "Apache Ossie, “Apache Ossie (Incubating): The New Name for Open Semantic Interchange”, アクセス日 2026-07-19↩︎\nApache Incubator, “Clutch: ossie” / “dist.apache.org 配布領域” / “GitHub Releases API”, いずれもアクセス日 2026-07-19↩︎\n例: Salesforce, “Ending Semantic Drift” / StartupHub.ai, “Open Semantic Interchange v1.0 Ends Metric Drift”, アクセス日 2026-07-19↩︎\n旧リポジトリ open-semantic-interchange/OSI の履歴より。コミット 2af09b2（2026-03-09）および 3f22030（2026-05-19）。アクセス日 2026-07-19↩︎\ndobachi, “Open Semantic Interchange (OSI) 技術深掘り — スコープと利用実例”（2026-07-10 初版）。本調査を受けて 2026-07-19 に訂正済み。↩︎",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>状況の整理</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/02-what-is-ossie.html",
+    "href": "chapters/02-what-is-ossie.html",
+    "title": "3  Ossie とは何か",
+    "section": "",
+    "text": "3.1 解こうとしている問題\n「売上」「解約率」「アクティブユーザー」といった指標の定義が、 BIツール・データウェアハウス・分析ツールのそれぞれに散らばって存在する。 同じ名前でも定義が違えば、ダッシュボード間で数字が食い違う。\nこの「セマンティック層の断片化」自体は BI の時代から続く古い問題である。 ダッシュボードを人間が見ている限り、数字の食い違いはいずれ気づかれる。 「先週の資料と数字が違う」と誰かが言い出し、そこで定義の相違が発覚する。 遅くとも意思決定の手前で止まることが多い。\nAIエージェントが指標を参照して判断するようになると、この歯止めが外れる。\nエージェントは受け取った定義をそのまま正しいものとして扱い、 判断を下し、次の処理へ渡す。誤差は検知されないまま下流へ伝播し、 その上にさらに判断が積み上がっていく。 気づかれないまま業務の連鎖が進んでしまう点が、従来との違いである。\n共通の定義基盤を持つ価値が質的に上がったというのが、Ossie の出発点である。",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Ossie とは何か</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/02-what-is-ossie.html#解こうとしている問題",
+    "href": "chapters/02-what-is-ossie.html#解こうとしている問題",
+    "title": "3  Ossie とは何か",
+    "section": "",
+    "text": "図 3.1: 一点の定義の食い違いが、人手のチェックを経ないまま下流全体へ広がっていく様子（概念図）",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Ossie とは何か</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/02-what-is-ossie.html#解法",
+    "href": "chapters/02-what-is-ossie.html#解法",
+    "title": "3  Ossie とは何か",
+    "section": "3.2 解法",
+    "text": "3.2 解法\nOssie は、セマンティックモデルを YAML / JSON で宣言的に記述する ベンダー中立な交換フォーマットを定める。 掲げる原則は「Write Once, Query Anywhere」。 一度書いた指標定義を、BI・AI・分析ツールが同じ意味で解釈できるようにする。\n構造は素直である。\nsemantic_model[]\n├── datasets[]        論理データセット。source で物理テーブルを指す\n│   └── fields[]      行レベルの属性。式は方言ごとに併記できる\n├── relationships[]   データセット間の外部キー関係\n└── metrics[]         集約式。モデル全体のレベルで定義する\n詳細は チャプター 4 で扱う。\n\n3.2.1 AI 向けの文脈を仕様に組み込んでいる\n特徴的なのは ai_context という要素が仕様レベルで用意されている点である。 セマンティックモデル・データセット・フィールド・メトリクスのそれぞれに、 AI 向けの指示・同義語・サンプル質問を付与できる。\nai_context:\n  instructions: \"受注の売上金額と件数を扱う。status で絞り込める。\"\n  synonyms: [\"売上\", \"受注\"]\n  examples: [\"先月の売上は？\"]\n指標定義そのものだけでなく、それをエージェントにどう説明するかを 交換対象に含めている。BI 時代のセマンティック層仕様との違いはここに出ている。",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Ossie とは何か</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/02-what-is-ossie.html#スコープの線引き-何を解かないか",
+    "href": "chapters/02-what-is-ossie.html#スコープの線引き-何を解かないか",
+    "title": "3  Ossie とは何か",
+    "section": "3.3 スコープの線引き — 何を解かないか",
+    "text": "3.3 スコープの線引き — 何を解かないか\nOssie の位置づけを誤らないために、ここを押さえておきたい。\nOssie が与えるのは「フォーマットの相互運用」であって 「意味の自動突き合わせ」ではない。\nA社とB社が別々のセマンティックモデルを持つとする。Ossie は両社のモデルを 同じ文法で表現させる。相手のメトリクス定義が機械可読で明示的になり、 プロプライエタリなサイロから解放される。\nしかし A社の churn と B社の churn を自動で同一視することはしない。 定義が食い違えば Ossie はその差分を正確に可視化するが、 対応づけ（マッピングや統一定義の合意）は当事者のガバナンスに委ねられる。\nプロジェクト自身もこれを認識している。ROADMAP.md の Ontology & Semantic Interoperability 節の Motivation にこうある1。\n\nOssie currently solves structural interoperability — any tool can read and write semantic models in a common format — but it does not yet solve conceptual interoperability, where different models may describe the same business concept using different names or structures.\n（Ossie は現時点で構造的相互運用を解いている。どのツールも共通フォーマットで セマンティックモデルを読み書きできる。しかし概念的相互運用はまだ解けていない。 それは異なるモデルが同じ業務概念を別の名前や構造で記述しうる、という問題である。）\n\n\n3.3.1 先行例として何が挙がっているか\n同じ箇所は、意味をオントロジーで定義する先行例として Palantir と Goldman Sachs Legend を挙げ、 「次元的なセマンティックモデルはその上に自然に載る」と述べている。\n補足しておく。\nPalantir Foundry の Ontology は、Customer や Order といった業務上の 「もの」をオブジェクトとして定義し、それらの関係と操作を記述する層である。 どのテーブルのどのカラムに実データがあるかとは切り離して、 概念の側を先に定めるアプローチを取る。\nLegend は Goldman Sachs が開発し 2020年10月に FINOS へ寄贈した データプラットフォームで、現在は FINOS のガバナンス下、Apache 2.0 で開発されている2。 中核の Legend-Pure は UML と OCL に着想を得た関数型のモデリング言語で、 業務モデルを先に定義し、そこから実装を導く作りになっている。\n「その上に自然に載る」とはどういうことか。 二層に分けて考えると分かりやすい。\n\n\n\n\n\n\n\n\n層\n何を定めるか\n例\n\n\n\n\n概念層（オントロジー）\n業務上の「もの」とその関係\n顧客とは何か、注文とは何か、両者はどう繋がるか\n\n\n次元層（セマンティックモデル）\nそれをどう測るか\n顧客ごとの売上合計、月次の注文件数\n\n\n\n「顧客」という概念が先に定まっていれば、 「顧客あたり売上」という指標はその概念を参照して定義できる。 逆に概念層がなければ、指標は物理テーブルのカラムを直接指すしかなく、 同じ「顧客」を指しているのかどうかを機械的に判定できない。\nOssie が現時点で持っているのは次元層だけである。 Ontology ワーキンググループが目指しているのは、その下に概念層を敷き、 異なるモデルが同じ業務概念を指していることを示せるようにすることだ。 それが「概念的相互運用」の中身である。\n\n\n\n\n\n\nノート「オントロジー」の語には幅がある\n\n\n\nROADMAP は Palantir と Legend をまとめて「オントロジーを使う」と括っているが、 両者の実装は同じではない。Legend は UML / OCL 系のモデリング言語であり、 RDF や OWL を用いる狭義のオントロジーとは系譜が異なる。\nOssie の Ontology ワーキンググループが検討している言語も、 n項関係や role 名を扱う ORM 系の設計で、こちらもまた別系統である（セクション 4.7.5）。\n\n\n概念的相互運用に向けた取り組みは Ontology ワーキンググループが担うが、 これは現時点でロードマップ上の目標であり、完成した機能ではない。\n\n\n\n\n\n\n重要過大評価を避けるための線引き\n\n\n\n「Ossie を採用すれば部門間・企業間で指標の意味が揃う」というのは誤りである。 揃うのは記述の文法であって意味ではない。\n意味を揃えるのは依然として人間の合意形成の仕事であり、 Ossie はその合意を機械可読な形で書き留める場所を提供するにすぎない。\nただしこれは小さな価値ではない。「何が食い違っているか」を 正確に指し示せること自体が、合意形成の前提になるからである。",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Ossie とは何か</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/02-what-is-ossie.html#業界別の共通語彙という方向",
+    "href": "chapters/02-what-is-ossie.html#業界別の共通語彙という方向",
+    "title": "3  Ossie とは何か",
+    "section": "3.4 業界別の共通語彙という方向",
+    "text": "3.4 業界別の共通語彙という方向\nこの線引きを踏まえたうえで動き始めているのが、 「業界単位で Ossie の上に共通ドメイン語彙を作る」というパターンである。\nFinancial Services Semantic Working Group が 2026-06-04 に初会合を開いている3。\n\nThe Financial Services Semantic Working Group has held its first formal meeting, bringing together practitioners from across banking, insurance, asset management, and market infrastructure to solve the industry’s semantic alignment challenge.\n（金融サービス・セマンティック・ワーキンググループが初の正式会合を開催し、 銀行・保険・資産運用・市場インフラの各領域から実務者を集めて、 業界の意味整合という課題に取り組む。）\n\n\n\n\n\n\n\nノートこのWGも一覧に載っていない\n\n\n\nチャプター 2 で見たワーキンググループ一覧の3系統 （docs/working_groups.md の5件、公式サイトの5件、ROADMAP の3件）の いずれにも Financial Services Semantic Working Group は含まれていない。\nWG の全体像を示す単一の情報源は、現時点で存在しないと考えたほうがよい。\n\n\n異なる業界どうしをつなぐなら、双方が参照する共通リファレンス・オントロジー （金融の FIBO など）へのマッピングが鍵になる。 ただし FIBO との関係について、プロジェクトは公式に答えていない。 Issue と Discussion が立っているが、いずれもコメントが付いていない4。\nなお「Net Asset Value のような業界共通の定義を揃える」という説明を 第三者の解説記事で見かけることがあるが、 具体的にどの指標を対象とするかを示した一次情報は確認できなかった。",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Ossie とは何か</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/02-what-is-ossie.html#footnotes",
+    "href": "chapters/02-what-is-ossie.html#footnotes",
+    "title": "3  Ossie とは何か",
+    "section": "",
+    "text": "Apache Ossie, “ROADMAP.md” L96、コミット 07be0176（2026-07-17）時点。アクセス日 2026-07-19。和訳は筆者による。↩︎\nFINOS, “Legend”, アクセス日 2026-07-19。Legend-Pure は “an immutable functional language based on the Unified Modeling Language (UML) and inspired by the Object Constraint Language (OCL)”（UML を基礎とし OCL に着想を得た、イミュータブルな関数型言語）と説明される↩︎\nOpen Semantic Interchange, “Updates” の 2026-06-04 のエントリ。アクセス日 2026-07-19。和訳は筆者による↩︎\napache/ossie Issue #220（Documentation request: clarify Ossie’s relationship with FIBO and financial-services ontology layering、コメント0件）および Discussion #219（同趣旨、コメント0件）。アクセス日 2026-07-19。関連する未決論点は セクション 4.8↩︎",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Ossie とは何か</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/03-specification.html",
+    "href": "chapters/03-specification.html",
+    "title": "4  仕様の詳細",
+    "section": "",
+    "text": "4.1 どれを規範として読むか\n本章は仕様リポジトリの一次読解にもとづく。\n参照はすべて 固定コミット 07be0176（2026-07-17）に対するもので、 比較対象はタグ osi-0.1.1-rc1。 以下、spec.md の行番号はこのコミット時点のものである。アクセス日はいずれも 2026-07-19。\n仕様リポジトリの core-spec/ には複数のファイルがある。 どれを軸に読むかを最初に決めておく必要がある。\nREADME は3ファイルを並記するだけで、 どれが規範かを明示していない。 ただし参照バリデータ validate.py が構造検証に使うのは osi-schema.json であり、 散文と JSON Schema が食い違う箇所では、機械的に「通る／通らない」を決めるのは スキーマのほうである。そこで本レポートは、 実装が実際に従う osi-schema.json を軸に読む。これは公式な優先順位ではなく、 検証の再現性を担保するための筆者の方針である。散文とスキーマが食い違う箇所は後述する。\n同じ仕様が3つの形式で表現されている点には注意が要る。\nspec.yaml は JSON Schema ではなく、構造を YAML で書き下した見取り図である。 各キーに型と説明をコメントで添えた形式で、機械検証には使われない。\n参照バリデータは JSON Schema による構造検証に加え、 名前の一意性、参照の整合、そして sqlglot による SQL 式の構文検証を行う。 ただし MDX / TABLEAU / MAQL は sqlglot が解釈できないため検証をスキップする。",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>仕様の詳細</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/03-specification.html#sec-spec-foundation",
+    "href": "chapters/03-specification.html#sec-spec-foundation",
+    "title": "4  仕様の詳細",
+    "section": "",
+    "text": "ファイル\n位置づけ\n\n\n\n\ncore-spec/osi-schema.json（330行）\nJSON Schema draft 2020-12。機械可読\n\n\ncore-spec/spec.md（594行）\n散文の仕様書。表形式の説明\n\n\ncore-spec/spec.yaml\nYAML 形式の仕様スケッチ。第3の表現（後述）\n\n\ncore-spec/expression_language.md（35KB）\n2026-07-15 追加。後述\n\n\nvalidation/validate.py（290行）\n参照実装のバリデータ。上記スキーマを読む\n\n\n\n\n\n\nosi-schema.json — 機械可読。バリデータが読む\nspec.md — 散文と表。人が読む\nspec.yaml — YAML のスケッチ。人が読む\n\n\n\n\n\n\n\n\n警告spec.yaml の書式は誤読を招きうる\n\n\n\nspec.yaml はトップレベルに dialects: と vendor_name: を並べている。 これらは「# Enumerations」というコメントの下に置かれた列挙値の定義であって、 文書に書くべきフィールドではない。\nしかし見た目は文書のひな型と区別がつかない。実際、 dialects をルート直下に出力してしまう実装が存在する（セクション 7.3）。\n一方 osi-schema.json のルートは version と semantic_model しか許しておらず、 バリデータもこれで検証する。書式の見取り図（spec.yaml）と 機械検証の対象（osi-schema.json）は別物である。",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>仕様の詳細</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/03-specification.html#sec-data-model",
+    "href": "chapters/03-specification.html#sec-data-model",
+    "title": "4  仕様の詳細",
+    "section": "4.2 データモデル",
+    "text": "4.2 データモデル\n\n4.2.1 全体像\n構造は5つの要素からなる。まず関係を掴んでおくと、以降の表が読みやすい。\n\n\n\n\n\n\n図 4.1: OSI 文書のデータモデル\n\n\n\ndatasets が中心にある。 これは物理テーブルそのものではなく、 「受注」「顧客」といった業務上の実体を表す論理的な単位である。 source で物理テーブルを指すが、指すだけで、テーブルの構造をコピーはしない。\nその下に fields が並ぶ。行レベルの属性、つまり 1行を見れば値が決まるものだけを置く。「受注日」「ステータス」「金額」がこれにあたる。 集約は書けない。\nmetrics は datasets の中ではなく、モデル全体のレベルに置かれる。 「売上合計」「顧客あたり平均受注額」といった集約式で、 複数のデータセットにまたがってよい。\nrelationships がデータセット同士を外部キーで結ぶ。\n\n\n4.2.2 なぜ metrics だけ外側にあるのか\nこの配置が Ossie の設計上の特徴である。\nCube・MetricFlow・Malloy・Looker といった既存のセマンティック層は、 いずれもデータセットの内側に measure（集約対象）を置く。 「orders テーブルの amount カラムを合計する」という形で、 集約の定義がテーブルに紐づく。\nOssie はそうしない。フィールドはあくまで素材で、 それをどう集約するかは上位の metrics が決める。\nこの違いは実装との摩擦を生む。 消費側が「measure への参照」を 前提としている場合、OSI のメトリクスをどこに対応づければよいか決まらない。 実際に情報が落ちることは セクション 7.4 で観測している。 設計論争としても未決である（セクション 4.8）。\n\n\n4.2.3 各要素の定義\n\n4.2.3.1 Semantic Model\n（spec.md L62-）\nトップレベルは semantic_model（配列）。\n\n\n\n\n\n\n\n\nフィールド\n必須\n備考\n\n\n\n\nname\n○\n\n\n\ndatasets\n○\n\n\n\ndescription / ai_context / relationships / metrics / custom_extensions\n\n\n\n\n\n\n\n4.2.3.2 Datasets\n（spec.md L96-）\n\n\n\n\n\n\n\n\nフィールド\n必須\n備考\n\n\n\n\nname\n○\n\n\n\nsource\n○\n物理テーブル参照（database.schema.table）またはクエリ\n\n\nprimary_key\n\n単一・複合いずれも配列で表現\n\n\nunique_keys\n\n配列の配列\n\n\nfields\n\n\n\n\n\nsource が物理層との唯一の接合点である。 本レポートが参照する固定コミット（07be0176）時点では、仕様は形式を 「database.schema.table 形式または query」としか定めておらず、 識別子のクォートの扱いを規定していない。これが後の動作確認で問題を生む （セクション 7.3）。\nなおスナップショット後の 2026-07-20、Snowflake のクォート付き識別子を扱う変更 （“quoted dot-separated identifier in snowflake”, #233）が main にマージされている1。 以下の記述はあくまで固定コミット時点のものである。\n\n\n4.2.3.3 Fields\n（spec.md L203-）\n\n\n\nフィールド\n必須\n備考\n\n\n\n\nname\n○\n\n\n\nexpression\n○\n方言対応のオブジェクト\n\n\ndimension\n\nis_time のみ\n\n\nlabel / description / ai_context / custom_extensions\n\n\n\n\n\n重要な点が2つある。\nフィールドに measure（メジャー）の概念はない。 スキーマに measure キーは存在せず、 additionalProperties: false で追加も禁じられている。 フィールドはあくまで「グルーピング・フィルタ・メトリクス式で使う行レベル属性」であり、 集約は metrics 側の責務である。\nフィールド式は集約を含んではならない。 仕様に明記がある（spec.md L234）。\n\nUse scalar SQL expressions (no aggregations)\n（スカラの SQL 式を使うこと。集約は用いない）\n\nそして dimension が持つ情報は is_time の真偽のみである。 数値か文字列かといった型情報を仕様は運ばない。 消費側は物理テーブルのスキーマを見るか、独自に推論するしかない。 この設計の帰結は セクション 7.4 で実測する。\nこの欠落は、プロジェクト側でも改善項目として認識されている。ROADMAP は is_time に代えてフィールドのデータ型そのものを持たせる Issue #84 “Support field datatype rather than is_time” を挙げている2。 現行スキーマには未反映だが、既知の課題として作業領域に載っている。\n\n\n4.2.3.4 Metrics\n（spec.md L308-）\n\n\n\nフィールド\n必須\n備考\n\n\n\n\nname\n○\n\n\n\nexpression\n○\n方言対応のオブジェクト\n\n\ndescription / ai_context / custom_extensions\n\n\n\n\n\nセマンティックモデルレベルで定義され、複数データセットにまたがれる。 式はデータセット修飾付き（SUM(orders.amount)）で書かれており、 フィールド式が裸のカラム名なのと対照的である。\n\n\n4.2.3.5 Relationships\n（spec.md L155-）\nfrom（多側）→ to（一側）を from_columns / to_columns の配列で結ぶ。 順序が対応し、要素数が一致する必要がある。複合キーに対応する。",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>仕様の詳細</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/03-specification.html#sec-dialects",
+    "href": "chapters/03-specification.html#sec-dialects",
+    "title": "4  仕様の詳細",
+    "section": "4.3 式と方言",
+    "text": "4.3 式と方言\nexpression:\n  dialects:\n    - dialect: ANSI_SQL\n      expression: \"customer_id\"\n方言 enum は7種（spec.md L48-60）。\nANSI_SQL / SNOWFLAKE / MDX / TABLEAU / DATABRICKS / MAQL / BIGQUERY\n同一フィールド・メトリクスに複数方言の式を併記できる。\nmetrics:\n  - name: total_revenue\n    expression:\n      dialects:\n        - dialect: ANSI_SQL\n          expression: \"SUM(orders.amount)\"\n        - dialect: SNOWFLAKE\n          expression: \"SUM(orders.amount)\"\n        - dialect: MDX\n          expression: \"Sum([Orders].[Amount])\"\nここが設計上の要点で、方言間の変換は仕様の責務ではない。\n\n4.3.1 方言ごとの式はどこから来るのか\n仕様は方言間の変換を定義していない。 expression は方言別エントリの配列であり、 複数方言の式を併記できる形にはなっているが、ある方言の式から別の方言の式を 自動生成する仕組みは仕様に含まれない。変換を提供するかどうかは各実装に委ねられている。\nしたがって、Snowflake でも MDX でも動くモデルを配布したい場合、 仕様が保証するのは「併記された式はそのまま運べる」ことまでで、 併記されていない方言の式がどこから来るかは仕様の外にある。 実装が変換器を持てばそこで補われるし、持たなければ書き手が併記することになる。\n\n\n\n\n\n\n重要Write Once の射程は構造に限られる\n\n\n\n「Write Once, Query Anywhere」の Write Once が仕様として保証しているのは、 おもに構造——データセット・フィールド・関係・AI向けの文脈——を一度書けば運べる、 という部分である。\n式の可搬性については、仕様は併記の器を用意するだけで、 方言間の自動変換は提供しない。ANSI_SQL しか書かれていないモデルを MDX 系のツールが読んだとき何が起きるかも、仕様は定めていない。 その差を実装が変換で埋めるのか、書き手が併記で埋めるのかは、仕様の外の問題である。\n\n\nこの負担配分を変えようとしているのが、後述の expression language 提案である （セクション 4.7）。",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>仕様の詳細</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/03-specification.html#拡張の仕組み",
+    "href": "chapters/03-specification.html#拡張の仕組み",
+    "title": "4  仕様の詳細",
+    "section": "4.4 拡張の仕組み",
+    "text": "4.4 拡張の仕組み\ncustom_extensions は vendor_name と任意の JSON 文字列 data の組で、 ベンダー固有情報の退避先となる。\nコア互換性を壊さずに拡張するための仕組みだが、裏を返せば ここに入った情報は他ベンダーには解釈されない。 「無損失な round-trip」を謳う実装が、実際には ベンダー固有情報を custom_extensions に押し込んでいるだけ、という場合がある。 round-trip として無損失であることと、interchange として無損失であることは別である。",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>仕様の詳細</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/03-specification.html#仕様内の不整合",
+    "href": "chapters/03-specification.html#仕様内の不整合",
+    "title": "4  仕様の詳細",
+    "section": "4.5 仕様内の不整合",
+    "text": "4.5 仕様内の不整合\nMetrics セクションの Expression Object 定義と、直後の Examples が食い違っている。\n定義側:\nexpression:\n  dialects:\n  - dialect: ANSI_SQL\n    expression: \"...\"\n例示側:\n- name: total_revenue\n  expression:\n    - dialect: ANSI_SQL\n      expression: SUM(orders.amount)\n例示には dialects: キーがなく、expression が直接配列になっている。 JSON Schema の Expression は dialects を必須とし additionalProperties: false であるため、 例示のほうがスキーマ違反である。\nなお公式サンプル examples/tpcds_semantic_model.yaml は定義側に従っている。",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>仕様の詳細</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/03-specification.html#sec-spec-diff",
+    "href": "chapters/03-specification.html#sec-spec-diff",
+    "title": "4  仕様の詳細",
+    "section": "4.6 0.1.1 と 0.2.0.dev0 の差分",
+    "text": "4.6 0.1.1 と 0.2.0.dev0 の差分\n散文の spec.md と JSON Schema の両方を比較した。\n\n4.6.1 散文で分かる差分\n\n\n\n\n\n\n\n変更\n内容\n\n\n\n\nvendor_name の緩和\n閉じた enum → 自由文字列。同じ一覧は非規範的な “well-known examples” として残り、HONEYDEW が追加\n\n\nBIGQUERY 方言の追加\n6種 → 7種\n\n\n記述の修正\nタイポ、ASFライセンスヘッダ、“OSI” → “Apache Ossie”\n\n\n\n\n4.6.1.1 変更の理由\nいずれもコミットメッセージに理由が明記されている3。\nvendor_name の緩和（7e984cb）:\n\nAllow any vendor or organization to define custom extensions without requiring changes to the core specification.\n（どのベンダーや組織であっても、コア仕様の変更を要さずに カスタム拡張を定義できるようにする。）\n\n閉じた列挙のままでは、拡張したいベンダーが増えるたびに 仕様本体を書き換える必要がある。その依存を切る変更である。 ASF 移管を控え、特定企業の名前を規範に埋め込まない形にする意図とも読めるが、 そこまでは明言されていない。\nBIGQUERY の追加（39f6999）は外部コントリビュータによるもので、 既存の6方言に GoogleSQL を並べる素直な追加である。\n\n\n\n4.6.2 JSON Schema でしか分からない差分\n散文の比較だけでは見落とす構造変更がある。\nルート直下の dialects / vendors が削除されている。\n\n\n\nスキーマ\nルートで許されるプロパティ\n\n\n\n\n0.1.1\nversion, dialects, vendors, semantic_model\n\n\n0.2.0.dev0\nversion, semantic_model\n\n\n\nいずれもルートは additionalProperties: false。したがって 0.1.1 で妥当だったルート直下の dialects を持つ文書は、 0.2.0.dev0 ではスキーマ違反になる。\n\n4.6.2.1 削除の理由と、リポジトリ内に残る不整合\nこのプロパティを削除したコミット c2233f0（2026-05-28）は、理由をこう書いている4。\n\nThese top-level enumeration properties were not referenced by any example or downstream consumer. validate.py only reads dialects from each expression’s per-dialect entries via the Expression definition.\n（これらのトップレベルの列挙プロパティは、いかなる例からも下流の利用側からも 参照されていなかった。validate.py は Expression 定義を介して 各式の方言別エントリからのみ dialects を読む。）\n\n整理としては筋が通っている。ルートの列挙は宣言されているだけで、 どこからも使われていない「死んだプロパティ」に見えた。\nしかし同じリポジトリの dbt コンバータは、ルート直下に dialects を出力する。 固定コミット 07be0176 時点のコンバータ実装を実際に動かすと、 version 文字列を 0.2.0.dev0 としながらルート dialects を含む文書を吐く（セクション 7.3）。 つまり削除の根拠が言う「下流の利用側から参照されていない」プロパティを、 リポジトリ同梱のコンバータ自身が出力していることになる。\ngit 履歴をたどると、この出力はコンバータ導入時から続いており、 version 文字列だけが後に 0.2.0.dev0 へ更新され、ルート dialects の出力は残されている5。 削除の判断がこのコンバータを見落としていたのか、 別トラックとして許容していたのかまでは、コミットメッセージからは読み取れない。\n結果として、公式コンバータは 0.1.1 の構造に 0.2.0.dev0 のラベルを貼った文書を出力する。 同一コミットの公式バリデータを通らない成果物であり、これは動作確認で実測している（セクション 7.3）。\nなお spec.yaml がトップレベルに dialects: を並べている書式も、 この種の誤読を招きやすい（セクション 4.1）。\n\n\n4.6.2.2 エンティティ定義は変わっていない\n$defs を比較すると、SemanticModel / Dataset / Field / Metric / Relationship などエンティティ定義はすべて同一である。 差分は Dialect（BIGQUERY 追加）と Vendor（enum → 自由文字列）のみ。\n\n\n\n\n\n\n重要バージョン文字列は排他的な識別子である\n\n\n\n各スキーマは version を const で固定している。enum でも pattern でもない。\n\n\n\nスキーマ\nproperties.version\n\n\n\n\nosi-0.1.1-rc1\n{\"const\": \"0.1.1\"}\n\n\nmain\n{\"const\": \"0.2.0.dev0\"}\n\n\n\nエンティティ定義がほぼ同一であるにもかかわらず、各スキーマは 自分のバージョン文字列だけを受け付ける。\n構造的にほぼ同じ文書が、バージョン文字列だけで相互に排除される。\n\n\nこの設計が実装にどう波及するかは チャプター 7 で実測する。",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>仕様の詳細</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/03-specification.html#sec-expression-language",
+    "href": "chapters/03-specification.html#sec-expression-language",
+    "title": "4  仕様の詳細",
+    "section": "4.7 expression language — 提案が文書化された段階",
+    "text": "4.7 expression language — 提案が文書化された段階\ncore-spec/expression_language.md が 2026-07-15 付で main に存在する （ステータス “Proposed Final”）。ASF 移管アナウンスの3週間後に入ったばかりである。\nただし「実装段階に入った」と読むのは早い。この文書が定義する新方言 Ossie_SQL_2026 は、 固定コミット時点の osi-schema.json の方言 enum にまだ入っておらず、既定方言化も実装されていない。 つまり現状は、口頭のアイデアではなく詳細な仕様案がリポジトリに文書として取り込まれた、 という段階である。初期リリース（0.1.1、後述の RC タグ）にも当然反映されていない。\n\n4.7.1 何を変えようとしているのか\n現行の設計では、方言ごとの式をモデル作成者が手で併記する（セクション 4.3）。 この提案はその負担配分を変える。\n\n\n\n\n\n\n図 4.2: 方言をどう扱うか — 現行と提案\n\n\n\nやり方は、方言どうしを相互変換するのではなく、 Ossie_SQL_2026 という共通の方言を新たに定義し、そこに寄せるというものである。 仕様には次の2点が明記されている。\n\n\nCreate a new dialect in the Ossie spec: Ossie_SQL_2026, which refers to this language specification.\nMake Ossie_SQL_2026 the default dialect if one is not chosen.\n\n（1) Ossie 仕様に新しい方言 Ossie_SQL_2026 を作る。これは本言語仕様を指す。 2) 方言が指定されなかった場合の既定を Ossie_SQL_2026 とする。）\n\nN個の方言があるとき、相互変換なら N×N 通りの対応が要る。 共通方言を1つ置けば、各実装が「その方言を自分のエンジン向けに解釈する」だけで済む。 ハブを1つ設けて放射状にする構図である。\n\n\n4.7.2 負担が書き手から実装へ移る\nこの提案の要点はここにある。\n\n\n\n\n\n\n\n\n\n現行 0.1.x\nOssie_SQL_2026 提案\n\n\n\n\n方言差を吸収する主体\n併記した書き手／変換を持つ実装\n共通方言を解釈する実装\n\n\n書き手がすることは\n併記したい方言の数だけ式を書く\n共通方言で1回書く\n\n\n可搬性の担保\n仕様は保証しない\n採択・統合されれば仕様が実装に要求する\n\n\n\n提案文書は “the SQL expression language subset that Ossie-compliant implementations MUST support”（Ossie 準拠の実装がサポートしなければならない SQL 式言語のサブセット） と述べており、義務を実装側に置く設計になっている。 ただしこの MUST は “Proposed Final” 段階の提案文書内の記述であって、 現行の osi-schema.json に統合された要件ではない。 採択されて初めて「準拠実装への要求」として効く。\n\n\n4.7.3 3段階コンプライアンスは実装に課される\nREQUIRED / RECOMMENDED / MAY は、文書の書き方の区分ではなく、 実装が満たすべき水準を指す。\n\n\n\n\n\n\n\n水準\n意味\n\n\n\n\nMUST Support（REQUIRED）\n実装は必ず対応する。最小の可搬な式言語\n\n\nSHOULD Support（RECOMMENDED）\n対応が望ましい。全DBにあるとは限らない分析関数\n\n\nMAY Support（拡張）\n対応は任意\n\n\n\n基盤に ANSI SQL:2003 Core（ISO/IEC 9075-2:2003）を選んだ理由として、 Snowflake・Databricks・PostgreSQL・BigQuery に広く実装されていること、 意味論が定まっていること、window 関数や CTE といった分析機能を持つことが挙げられている。\nただし注意が要る。CTE が選定の魅力として挙がることと、 式で CTE を使えることは別である。 同じ提案文書の “Not Supported” は CTE を明示的に対象外としている。つまり「CTE を持つ SQL:2003 Core を土台に選んだ」が、 「移植可能サブセットで CTE を書ける」わけではない。\nベンダー固有の機能は、従来どおり方言拡張から使える。 共通部分の可搬性を仕様が担保し、その外は各ベンダーに委ねるという切り分けである。\n\n\n4.7.4 適用範囲は論理層のみ\nこの提案が対象とするのは論理層（メトリクス・フィールド・フィルタ）であり、 オントロジー層は対象外と明記されている。 オントロジー層でも同じ式言語を使えるとよいが、それは別提案として扱う、とある。\nなおオントロジー層の対応先として、仕様は OWL に加えて RelationalAI の (Py)Rel と Goldman Sachs の Legend を挙げている。 チャプター 3 で触れた2つの系譜が、ここでも参照されている。\n\n\n4.7.5 オントロジー層の言語は ORM 系である\nオントロジー層そのものは別ファイル ontology/ontology.md で定義されている6。 その設計は、BI 系のセマンティックモデルとも、RDF/OWL の狭義オントロジーとも異なる、 Object-Role Modeling（ORM）系である。根拠は次のとおり。\n\n関係は n 項である。relationship は “relate objects of one or more concepts” と定義され、OneToOne は “only for binary relationships” と但し書きされる。 二項に限らない関係を前提にしている\nrole（役割名）を第一級で扱う。各関係は roles を持ち、 概念は「その関係で最初の role を演じる」形で関係を束ねる\nverbalizes（自然言語化）が必須。関係には verbalizes: [ '{Person} is identified by {SocialSecurityNr}' ] のように、 リンクを自然言語で言い表すパターンを付ける\n\nn 項関係・role・verbalizes を核に据える設計は、ORM / NIAM（fact-based modeling）の 系譜そのものである。RelationalAI の (Py)Rel が同系統であることとも符合する。\nつまり Ossie は、論理層（次元的なセマンティックモデル）と オントロジー層（ORM 系）という、由来の異なる2つのモデリング伝統を 1つの仕様の中で接ごうとしている。チャプター 3 の 「オントロジーの語には幅がある」で触れた論点の、仕様側の裏づけである。\n\n\n4.7.6 集約関数の分解可能性分類\n技術的に最も興味深いのはこの部分である。集約関数を4つに分類する。\n\n\n\n\n\n\n\n\n分類\n例\n性質\n\n\n\n\nDistributive\nSUM, COUNT, MIN, MAX\n部分集約の結果をそのまま再集約できる\n\n\nAlgebraic\nAVG, STDDEV\n中間状態を持てば再集約できる\n\n\nHolistic\nMEDIAN, COUNT DISTINCT\n再集約できない\n\n\nSketch-based\n—\n近似構造を用いる\n\n\n\nこれは多段集約、すなわち cross-grain 再集約の土台になる。 粒度をまたいで指標を積み上げられるかどうかは、 セマンティック層が実用に耐えるかを分ける論点であり、 それを仕様レベルで扱おうとしている点は評価できる。\nただし再集約規則そのものは Google Doc にあり、Apache リポジトリにない（セクション 5.3）。\n\n\n4.7.7 移植不能な部分の隔離\n日時フォーマット文字列は Oracle 系 TO_CHAR / strftime / Java LDML の 三つ巴で移植不能である。仕様はこれを EXPERIMENTAL として明示的に隔離したうえで、 全主要エンジンで表現可能な「移植可能コア」だけを定義している。\n解けない部分を解けないと書く姿勢は、仕様の書き方として誠実である。",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>仕様の詳細</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/03-specification.html#sec-spec-open-questions",
+    "href": "chapters/03-specification.html#sec-spec-open-questions",
+    "title": "4  仕様の詳細",
+    "section": "4.8 未決の設計論点",
+    "text": "4.8 未決の設計論点\nGitHub Discussions には設計上の議論が公開されている。 以下は結論が出ていない主な論点である。\nこれらは Discussion 上で散発的に交わされているだけではない。 プロジェクトの ROADMAP.md は共通の式・クエリ言語（“Semantic Query Language & Reference Engine”）を 明示的な取り組みとして掲げており7、フィールドのデータ型は前掲 Issue #84、 検証済みクエリは Discussion #82 として、それぞれ追跡対象になっている。 「未決」は放置ではなく、作業項目として認識されたうえでの未決である点は補っておく。\n\n4.8.1 先に用語を2つ\nmeasure（メジャー）とは、集約の対象となる数量と、その集約方法の組を指す。 Cube・MetricFlow・Looker といったセマンティック層では、 これをデータセット（テーブル）の内側に定義する。\n# dbt/MetricFlow のネイティブ記法の例\nsemantic_models:\n  - name: orders\n    measures:\n      - name: amount_sum      # ← これが measure\n        agg: sum              #   何を(expr)どう集約するか(agg)を持つ\n        expr: amount\n「orders テーブルの amount カラムを合計したもの」に amount_sum という名前を与え、 メトリクスはその名前を参照する。集約の定義がテーブルに紐づくのが特徴である。\nメトリクスツリーは、ひとつの指標を構成要素へ分解して木構造で表したものを指す。 「売上 = 客数 × 客単価」「客数 = 新規 + 既存」のように辿れる形にして、 どの要素が全体に効いているかを見るために使う。 value driver tree などとも呼ばれ、名称自体が定まっていない。\n\n\n4.8.2 集約方法をどう表現するか\n3案が並存し、未採択のままである。\n\n\n\n\n\n\n\n\n案\n提唱\n内容\n\n\n\n\n構造化 enum\nAtScale\naggregation_method を列挙型で持つ\n\n\n関数名前空間\nLloyd Tabb（Malloy）\nOSI_* 関数として定義\n\n\nSQLサブセット + エスケープハッチ\nSnowflake\n移植保証付きのサブセットを定め、外れる場合は逃がす\n\n\n\n実装フェーズに進んだのは3番目である（セクション 4.7）。\n\n\n4.8.3 メトリクスツリー\n「メトリクスツリー」が派生メトリクスなのかどうかで、 提起者と RelationalAI が真っ向から対立している （“I am definitely not talking about derived metrics” ＝私が言っているのは派生メトリクスでは断じてない）。 用途も「相関検証」対「エージェントへの推論コンテキスト」で割れており、 名称すら value driver tree / metric tree / derived metrics で定まっていない。\n\n\n4.8.4 最上位 metrics か dataset 内 measures か\nセクション 4.2 で見たとおり、Ossie は metrics をモデル全体のレベルに置く。 既存のセマンティック層は、いずれもデータセットの内側に measure を置く。\nどこが違うのか。\n\n\n\n\n\n\n\n\n\ndataset 内 measure 方式\nOssie の最上位 metrics 方式\n\n\n\n\n集約の定義場所\nテーブルに紐づく\nモデル全体\n\n\n「売上合計」を定義するには\norders の中に sum(amount) を置く\nどのデータセットにも属さない式として書く\n\n\n複数テーブルにまたがる指標\n扱いにくい。measure は1テーブルに属するため\n書きやすい。最初からモデル全体を見ている\n\n\n消費側への写像\n既存ツールと同型\n対応先が決まらない\n\n\n\nOssie 方式の利点は、複数のデータセットにまたがる指標を素直に書けることである。 「顧客あたり売上」のように、注文テーブルと顧客テーブルの両方を要する指標を、 どちらかのテーブルの所属物にせずに定義できる。\n一方の難点が、消費側との噛み合わなさである。 dbt/MetricFlow は「メトリクス = measure への参照」を前提とするので、 measure を持たない OSI のメトリクスを受け取ると参照先が空になる。 実際に集約関数が脱落することは セクション 7.4 で実測している。\nこの噛み合わなさを背景に、議論スレッドでは複数の参加者から 「分けることに何の価値があるのか」「名前空間の問題なのか、意味論的な違いがあるのか」 という問いが投げられている。主要な実装が揃って measure 方式を採っている以上、 そこから外れる Ossie 方式の側が理由を示すべきではないか——という含意の問いであり、 いわば立証責任を Ossie 側に置く論法が参加者から提示された形である。 これに対し仕様側は「メトリクス言語ワーキンググループの重要な論点であり、 提案がまとまり次第、公開文書を出す」という回答にとどまっている8。\n\n\n4.8.5 横断する軸 — どこまで仕様で構造化するか\n個々の論点を貫いているのは、何をどこまで仕様の構造として定めるかという問いである。\n対立する2つの立場がある。\n構造化する側は、意味を明示的なフィールドとして仕様に持たせたい。 検証できる、実装が解釈を誤らない、という利点がある。 代わりに仕様が大きくなり、実装がすべてを解釈する義務を負う。\n構造化しない側は、自由テキストや汎用の入れ物に留めたい。 仕様が小さく保たれ、実装の負担が軽い。用途の変化にも追随しやすい。 代わりに、解釈は消費側（近年はしばしば LLM）に委ねられ、 同じ文書が実装によって違う意味に読まれうる。\n要するに柔軟性と実装コストのトレードオフである。 仕様を厚くすれば相互運用の精度は上がるが、 その水準を満たせる実装は減り、普及が遅れる。\nこの緊張は具体的な議論にも現れている。 たとえば「検証済みクエリ（verified queries）を ai_context の中に埋めるのではなく、 仕様の第一級要素にすべきだ」という提案には賛同が集まっている9。 一方で「検証やパーサを提供して品質を担保したいが、 方言を増やすほどそれが難しくなる」という指摘もある10。 後者は構造化を志向しつつ、その実装コストが方言の数に比例して膨らむことを述べている。\n\n\n\n\n\n\nノート立場と所属の相関は確認できなかった\n\n\n\n「特定ベンダーの参加者が一貫して構造化に反対している」といった、 所属と設計上の立場の相関は、公開されている議論からは読み取れなかった。\n構造化を推す発言も慎重な発言も、複数の組織の参加者から出ている。 実装コストへの言及も、特定ベンダーに偏ってはいない。\n\n\n\n\n4.8.6 議論が付いていない論点\n一方で、提起されたまま反応が少ない論点もある。\n\ngrain（粒度）を first-class の概念として扱うべきか\nOssie は交換フォーマットなのか、実行時の標準まで担うのか\nインポータは方言変換の義務を負うのか\nFIBO のような既存オントロジーとどう関係づけるか（チャプター 3）\n\nいずれも仕様の性格を決める問いだが、 2026年7月時点でコメントが付いていないか、ごく少ない。\nいずれも答えを出すのが難しい問いではある。ただし反応の少なさから需要の有無までは読み取れない。 コメントが付いていないことは観測できるが、公開 Discussion 上の反応量だけでは、 関心が弱いのか、単に議論の順番が回ってきていないだけなのかは判定できない。\n需要の側から言えば、クエリ時にパラメータを渡せるメトリクスは、 累積 window の議論と、金融領域の posted-at / settled-at の議論で それぞれ独立に必要性が語られている。 仕様にはまだ入っておらず、専用の議論スレッドも見当たらない。",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>仕様の詳細</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/03-specification.html#footnotes",
+    "href": "chapters/03-specification.html#footnotes",
+    "title": "4  仕様の詳細",
+    "section": "",
+    "text": "apache/ossie PR #233（2026-07-20 マージ）。本レポートの動作確認は 2026-07-17 の固定コミットに対して行っており、この変更は反映していない。アクセス日 2026-07-21↩︎\napache/ossie Issue #84: Support field datatype rather than is_time。ROADMAP の改善項目として参照。アクセス日 2026-07-21↩︎\n旧リポジトリ open-semantic-interchange/OSI の履歴より。コミット 7e984cb（2026-05-21）、c2233f0（2026-05-28）、39f6999（2026-06-02）。アクセス日 2026-07-20。和訳は筆者による↩︎\n同上、コミット c2233f0。和訳は筆者による↩︎\n固定コミット 07be0176 の converters/dbt。ルート dialects を出力する挙動と、version=\"0.2.0.dev0\" 化の経緯は同ディレクトリの git 履歴による。本レポートは実際の出力を セクション 7.3 で確認している。アクセス日 2026-07-21↩︎\nApache Ossie, “core-spec/ontology/ontology.md”（version: 0.2.0.dev0）。コミット 07be0176（2026-07-17）時点。アクセス日 2026-07-20↩︎\napache/ossie の ROADMAP.md（固定コミット 07be0176）。式・クエリ言語は “Future Efforts” に置かれ、専任ワーキンググループは未設置。アクセス日 2026-07-21↩︎\napache/ossie Discussion #29: Top level “metrics” vs. dataset-level “measure”s, アクセス日 2026-07-20↩︎\napache/ossie Discussion #82: Add verified_queries as a core element of the spec, アクセス日 2026-07-20↩︎\napache/ossie Discussion #35 の Kurt Stirewalt（RelationalAI）の発言。“I personally think we should lean into validation by providing parsers and type checkers that help ensure the quality of a model in the OSI. That gets harder to do the more we try to support different dialects.”（OSI のモデル品質を担保するパーサや型検査器を提供する方向に寄せるべきだと個人的には思う。ただし対応する方言が増えるほど、それは難しくなる。）アクセス日 2026-07-20。和訳は筆者による↩︎",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>仕様の詳細</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/04-governance.html",
+    "href": "chapters/04-governance.html",
+    "title": "5  ASF移管とガバナンス",
+    "section": "",
+    "text": "5.1 移管の経緯\n各社のブログは「ベンダー中立になった」と書く。 本章はそれが実態としてどこまで成立しているかを、ASF の一次情報で確かめる。\n主な参照先は podling status page、 Clutch、 incubation proposal、 dev@ アーカイブ、 general@incubator アーカイブ。 アクセス日はいずれも 2026-07-19。\n結論を先に書く。構造としては本物、実態はまだ偏在。 「ベンダー中立な運営体制の入口に立った」が正確である。\n受入手続きは正規に踏まれている。\n投票結果は binding +1 が6票（Tison, PJ Fanning, Russell Spitzer, Markus Weimer, JB Onofré, Larry McCay）、non-binding +1 が2票。",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>ASF移管とガバナンス</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/04-governance.html#移管の経緯",
+    "href": "chapters/04-governance.html#移管の経緯",
+    "title": "5  ASF移管とガバナンス",
+    "section": "",
+    "text": "項目\n内容\n\n\n\n\nIncubator 入り\n2026年6月（ASF 資料で日付が揺れる。後述）\n\n\nChampion\nJB Onofré（proposal 記載時は Dremio）\n\n\nMentors\nJB Onofré / Holden Karau / Zili Chen / Russell Spitzer\n\n\n初期コミッター（proposal の候補）\n14名（PPMC 5＋committer 9。実際に権限を持つ人数は別。後述）\n\n\nリポジトリ\napache/ossie（作成は 2025-11-18）\n\n\n\n\n\n\n\n\n\nノート入り日は ASF 資料内でも揺れている\n\n\n\nIncubator 入りの日付は一次資料の中でも一致しない。Clutch のステータスは Started: 2026-06-19 とする一方、同じ Clutch の News 欄は 2026-06-22 Project enters incubation. とする1。本レポートでは おおむね 2026年6月下旬 として扱い、日付そのものを論拠にはしない。\n\n\n\n\n[PROPOSAL] Ossie, a data semantic specification and framework — 2026-06-11\n[VOTE] Accept Ossie into the Apache Incubator — 2026-06-16\n[RESULT][VOTE] — 2026-06-18\n\n\n\n5.1.1 受入時のレビューで、確認できたライセンス指摘が1件\n投票の議論中、IPMC メンバーの PJ Fanning がライセンスの件を指摘している2。\n\nProbably not a big issue but the OSI GitHub repo mentions CC-BY license. But ASF license docs have reservations about this license.\n（大した問題ではないと思うが、OSI の GitHub リポジトリは CC-BY ライセンスに 言及している。ASF のライセンス関連文書はこのライセンスに留保を置いている。）\n\n指摘のトーンは穏当で、「おそらく大した問題ではないが」と前置きされている。 続いて tison が ASF の Legal Resolved を示し、 CC-BY コンテンツをソース形式で含めることへの制限を説明した。\n対応は同日中に行われた。Russell Spitzer が PR #157「Relicense Documentation to ASF 2.0」を起票し、 2026-06-16 19:19 UTC にマージされている3。 PR 本文は、この変更が受入投票で提起されたライセンス上の懸念に対応するものだと述べる。 ただし PR のマージが示すのは表示上のライセンス変更であって、 権利処理や全著作者の同意といった IP clearance 全体の完了までは、これだけでは確認できない。 投票スレッド上では、この後に追加の異議は確認していない。\n指摘から解消まで約5時間半。 受入プロセスに外部のレビューが挟まっていることの確認にはなる。 ただし指摘自体は軽微なもので、修正を起票した Russell Spitzer は Snowflake 所属かつ Ossie の mentor でもある。\n\n\n5.1.2 インフラ立ち上げの経過\npodling status page に記録されている日付は以下のとおり4。\n\n\n\n日付\n出来事\n\n\n\n\n2026-06-22\nincubation 入り\n\n\n2026-06-23\nDNS 申請\n\n\n2026-06-26\nML 開設 / git リポジトリ移管 / issue tracker 設定\n\n\n2026-06-29\nmentor アクセス付与\n\n\n2026-07-08\ndev@ で最初の実質投稿\n\n\n\nincubation 入りから4日で主要インフラが揃っている。 他の podling と比較していないため「速い」とまでは言えないが、 少なくとも立ち上げが滞っている様子はない。\nなお podling status page の Mailing Lists 欄は 「dev@, private@, commits@, issues@ polaris.apache.org」となっており、 ドメイン名が Apache Polaris のものになっている。 テンプレートの流用時の修正漏れと思われる。",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>ASF移管とガバナンス</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/04-governance.html#リリースと卒業の現状",
+    "href": "chapters/04-governance.html#リリースと卒業の現状",
+    "title": "5  ASF移管とガバナンス",
+    "section": "5.2 リリースと卒業の現状",
+    "text": "5.2 リリースと卒業の現状\n\n5.2.1 Apache Release はゼロ\nチャプター 2 で述べたとおり、Apache Release は1本も出ていない。 Clutch ページは “No releases” かつ “No PGP Signing Keys” を示す（収集日 2026-07-07 UTC 表示）。 署名鍵はリリース準備の中で登録できるので「鍵がない＝直近で出せない」とまでは言えないが、 少なくとも公開リリースへ向けた外形的な準備の痕跡は、現時点で確認できない。\ndev@ のアーカイブにも、リリース計画に関する議論は見当たらなかった5。\n\n\n5.2.2 卒業までの距離\n新規 podling は、最初の3か月は毎月、その後は四半期ごとに報告する義務がある6。 Ossie は6月下旬に受け入れられたため、この月次報告の対象になる。\n実際の状況を追うと、2026年7月の Incubator report で Ossie は 「新規 podling」として記載されるにとどまり、詳細報告は提出していない7。 受入が直近すぎたためで、“failed to report” 扱いでもない。 最初の実質的なステータス報告は、通常なら8月の月次報告になる。\nしたがって「初回報告まで何もない」のではなく、今後の月次報告が 最初の外部評価の機会になる。8月・9月の報告に、mentor の応答性・ PPMC の自己評価・リリース計画が現れるかを見るのが有効である。\nClutch が挙げる未充足項目は次のとおり8。\n\nドキュメント用 wiki の未整備\npodling website の未整備（ossie.apache.org は稼働しているが、 Clutch の基準を満たしていないと判定されている。理由は未確認）\nrelease distribution area の未設定\n\n卒業の判断は、固定した期間や報告回数で決まるものではなく、 コミュニティの多様性、ASF 流の意思決定の定着、 Apache Release を作成・公開できる能力の実証、IP clearance の完了、 そして最終的にコミュニティ投票・IPMC の推薦・理事会の承認による9。\n現時点の Ossie は、Apache Release がなく（チャプター 2）、 release distribution area も未設定で、ML 上で追跡できる合意・投票の実績も乏しい。 卒業の時期は予測できないが、少なくとも現状は リリース能力・意思決定の定着といった実績がまだ積み上がっていない段階である。 参考までに、ASF は典型的な incubation 期間を約1.5年としている10。",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>ASF移管とガバナンス</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/04-governance.html#sec-governance-decisions",
+    "href": "chapters/04-governance.html#sec-governance-decisions",
+    "title": "5  ASF移管とガバナンス",
+    "section": "5.3 意思決定はどこで行われているか",
+    "text": "5.3 意思決定はどこで行われているか\n\n5.3.1 dev@ の稼働実態\ndev@ossie.apache.org のメッセージ総数は 28通（2026-07-19 時点）11。 リスト開設は 2026-06-26、実質的な最初の投稿は 2026-07-08。 稼働してまだ約2週間である。\n立っているスレッドは、アナウンス、運営提案、参加表明、技術議論、 そして GitHub Discussions からの転送に分かれる。 投稿数上位は JB Onofré 6通、Yong Zheng 6通、Will Pugh 3通。\n複数社が絡む議論にはなっている。 “Inconsistent projects/modules managements” スレッドには Emil Sadek（columnar.tech）、Khushboo Bhatia、Aniket Kulkarni（dremio.com）が返信している。\n\n\n5.3.2 仕様変更の [VOTE] は一度も実行されていない\npodling サイトは “a formal discussion-and-vote process for spec changes” （仕様変更に関する正式な議論と投票のプロセス）を掲げる。 しかし dev@ 上に仕様変更の [VOTE] スレッドは1本も存在しない。\n唯一 [PROPOSAL] が付いているのはコミュニティミーティングの開催時刻の件であり、 仕様の変更に関するものではない。\n実際の仕様議論は GitHub Discussions で行われ、[D] プレフィックス付きで dev@ に転送されているにとどまる。\nASF が求める「決定は ML 上で行う（If it didn’t happen on the list, it didn’t happen）」 という規範から見ると、議論の重心はまだ GitHub 側にある。 これは incubation 初期の podling によくある状態であり、 mentor から是正が入る典型ポイントでもある。\n\n\n5.3.3 GitHub Discussions からも決定が抜けている\n中核的な意味論が Google Docs と Slack に置かれている。 集約の再集約規則という、仕様の根幹に関わる内容が Google Doc にあり、 Apache リポジトリに存在しない。\n議論の所在が分散していることの一例として、 オントロジー層の追加という近い主題が、別々の Discussion に立っている。 2026-01-15 の #22「relational ontologies にもとづくモデル交換」と、 2026-04-06 の #101「オントロジー層のサポート」である12。 両者が同じ論点を重複して扱っているように見える一方、 後発の #101 が先行の #22 を「重複」と認識した形跡は、公開情報では確認できない。 情報分散が原因で重複したのか、単に並行して提案されたのかは断定できないが、 関連する提案が複数の場所に散らばること自体は観測できる。\nワーキンググループも Slack チャンネル単位で運営されている（チャプター 2）。\n\n\n\n\n\n\n図 5.1: ASF が決定の場として期待する ML と、実際に議論・決定が起きている場のずれ\n\n\n\n\n\n\n\n\n\n警告ASF に移管した意味が問われる部分\n\n\n\nML では決めず、GitHub Discussions で議論し、 実質的な決定は Slack と Google Docs にある——という構図になっている。\nASF のガバナンスが提供する価値の中核は「決定過程が公開アーカイブに残ること」である。 その点で、ML 上に追跡できる合意・投票の実績はまだ乏しく、 ASF 流のプロセスが定着したとは言いにくい。ただし ML への転送や 公開 GitHub Discussion は使われており、完全に機能していないわけではない。\nなお ML アーカイブ自体にも不備があり、プロジェクト側も Issue #193 で認識している。",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>ASF移管とガバナンス</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/04-governance.html#ベンダー中立性の実態",
+    "href": "chapters/04-governance.html#ベンダー中立性の実態",
+    "title": "5  ASF移管とガバナンス",
+    "section": "5.4 ベンダー中立性の実態",
+    "text": "5.4 ベンダー中立性の実態\n\n5.4.1 PPMC の構成\nincubation proposal では PPMC 5名と committer 9名に分かれており、 所属が明記されているのは PPMC 5名のみである。\n\n\n\nPPMC\n所属（proposal 記載）\n\n\n\n\nKhushboo Bhatia\nSnowflake\n\n\nLior Ebel\nSalesforce\n\n\nQuigley Malcolm\ndbt Labs\n\n\nJB Onofré\nDremio\n\n\nRussell Spitzer\nSnowflake\n\n\n\nこの proposal 時点の PPMC 候補5名のうち2名が Snowflake である。 ただしこれは proposal の候補構成であって、現時点の PPMC 全体ではない （後述のとおり、実際に権限を持つ人数は Clutch 上4名にとどまる）。\n残り9名は proposal 上で所属が明示されていない。これ自体が透明性の観点で弱点になる。\n\n\n5.4.2 コミットログから見える実態\nsfc-gh- プレフィックスは Snowflake 社員アカウントの命名規則である。\nコミット数の上位は次のとおり。\n\n\n\n貢献者\n所属\ncommit 数\n\n\n\n\nKhushboo Bhatia\nSnowflake\n20（gmail 16 + snowflake.com 4）\n\n\nKurt Stirewalt\nRelationalAI\n15\n\n\nBaruch Oxman\nHoneydew\n15\n\n\nJB Onofré\nApache\n9\n\n\nRalf Becher\n個人\n6\n\n\nEmil Sadek\ncolumnar.tech\n8\n\n\nQuigley Malcolm\ndbt Labs\n4\n\n\n\n出典は GitHub API（repos/apache/ossie/contributors および repos/apache/ossie/commits）。 所属はコミットのメールドメインによる推定を含む。アクセス日 2026-07-19。 sfc-gh- プレフィックスが Snowflake 社員の命名規則である点は Snowflake のブログ著者ページで裏を取った。\nSnowflake が単独最大ではある。しかし RelationalAI と Honeydew の個人がそれぞれ Snowflake 主力とほぼ同等の commit 数を 出しており、「Snowflake のワンマンプロジェクト」とまでは言えない。\nなお karanasher（19 commits、contributor 3位）は committer リストに載っていない。 所属も未確認である。\n\n\n5.4.3 proposal 自身が偏重を認めている\nOssie の incubation proposal は、Known Risks の節でこう書いている13。\nHomogeneous Developers（開発者の同質性）\n\nthe contributor base is currently concentrated across three organizations. We view diversification as a critical incubation goal, not a stretch objective.\n（貢献者の基盤は現在、3つの組織に集中している。 我々は多様化を、努力目標ではなくインキュベーションの重要な達成目標と位置づける。）\n\n対処として、good first issue のバックログ整備、オンボーディング・ワークショップ、 コントリビュータ・スプリントの実施を挙げ、 創設組織の外からの参加者を積極的に募るとしている。\nReliance on Salaried Developers（有給開発者への依存）\n\nWhile most of the contributors are affiliated with Snowflake, Dremio, dbt Labs, Salesforce, the commitments to open source ensure a genuine commitment to the Apache Way and open source principles.\n（貢献者の多くは Snowflake、Dremio、dbt Labs、Salesforce に所属しているが、 オープンソースへのコミットメントが、Apache Way と オープンソースの原則への真摯な取り組みを担保する。）\n\nエコシステムが成熟し他組織が実装を作るにつれ、 創設企業の被雇用者を超えて貢献者が自然に多様化すると見込む、としている。\n各社ブログの「ベンダー中立になった」という表現と比べると、 proposal 本文のほうが現状を率直に記述している。\nなお proposal は meritocracy についてこう述べる。\n\ncontributors earn merit through sustained work of any kind and committership is earned by demonstrated contribution rather than employer\n（貢献者はあらゆる種類の継続的な作業を通じて信任を得る。 コミッター権は、雇用主ではなく実証された貢献によって得られる。）\n\nこれは方針の宣言であって現状の描写ではない点に注意が要る。\n同じ proposal は、仕様変更について 最低7日間の議論期間と +1 / 0 / -1 の投票を要すると定めている。 この手続きが実際に使われた記録は、2026年7月時点で確認できていない（前節）。\n\n\n5.4.4 Clutch と status page の食い違い\nClutch は committers 4名（全員 PPMC）と表示する一方、 podling status page は14名を挙げる。\nClutch が committers を4名と数える一方、status page は14名を挙げる。 14名は proposal 上の「予定された初期コミッター」であり、 実際に権限を持つのはその一部、という読みはできる。 ただし Clutch の4名が正確に何を数えているか（LDAP アカウント作成済みか、 実際の commit 権限保有者か)は一次資料から確定できない。推定にとどまる。",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>ASF移管とガバナンス</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/04-governance.html#移管の前後で活動量は増えたか",
+    "href": "chapters/04-governance.html#移管の前後で活動量は増えたか",
+    "title": "5  ASF移管とガバナンス",
+    "section": "5.5 移管の前後で活動量は増えたか",
+    "text": "5.5 移管の前後で活動量は増えたか\n移管後に活動量は増えている。ただし変動値のスナップショットであり、 移管が原因で加速したという因果までは、この数字だけでは言えない。\n以下は 2026-07-19 時点の GitHub API の値である（日次で変わる）。\n\n\n\n指標\n値（2026-07-19 時点）\n\n\n\n\nmerged PR 累計\n68\n\n\nうち 2026年6月下旬以降\n32\n\n\n6月下旬以降の commit\n52\n\n\nリポジトリ star\n1,342\n\n\n\n出典は GitHub API（search/issues?q=repo:apache/ossie+type:pr+is:merged および repos/apache/ossie）。アクセス日 2026-07-19。数値は集計方法（merge 方式・ 共同著者・メール統合)で変わりうる。移管日（6/19 か 6/22 か）で前後区分も動く。\n約7ヶ月（2025-11 〜 移管前）で merged PR 36本に対し、移管後の約4週間で32本。 活動量が増えたのは確かだが、次の理由で「移管が加速させた」とは断定できない。\n\n4週間という観測窓は短く、アナウンス直後の一時的な効果と持続的な傾向を区別できない\nASF 移管に伴う機械的変更（LICENSE/NOTICE 追加、ヘッダ付与、CI 再構成、 ライセンス変更作業）が PR 数を押し上げている可能性がある。内訳は未確認\n\n定性的には、dev@ 開設からの2週間で committer リストにない人物からの 参加表明が複数あり、ASF ブランドが新規参加の敷居を下げた兆候はある。",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>ASF移管とガバナンス</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/04-governance.html#中立性をどう判定すべきか",
+    "href": "chapters/04-governance.html#中立性をどう判定すべきか",
+    "title": "5  ASF移管とガバナンス",
+    "section": "5.6 中立性をどう判定すべきか",
+    "text": "5.6 中立性をどう判定すべきか\n「ベンダー中立になった」が妥当かは、宣言ではなく実績で判定すべきである。 以下の3点が指標になる。\n\n仕様変更の VOTE で、所属に関係なく反対意見が検討され、 理由付きの合意が公開の場に記録されるか\n創設企業以外からの committer 昇格が起きるか\n初回 Apache Release を IPMC 投票で通せるか\n\nいずれも 2026-07-19 時点では未達である。",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>ASF移管とガバナンス</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/04-governance.html#footnotes",
+    "href": "chapters/04-governance.html#footnotes",
+    "title": "5  ASF移管とガバナンス",
+    "section": "",
+    "text": "Apache Incubator, “Clutch: ossie”（“Started: 2026-06-19” と “2026-06-22 Project enters incubation.” が併存）、アクセス日 2026-07-21↩︎\nPJ Fanning, “Re: [VOTE] Accept Ossie into the Apache Incubator”, general@incubator.apache.org, 2026-06-16 13:50:42. permalink（アクセス日 2026-07-19）↩︎\nopen-semantic-interchange/OSI, “PR #157: Relicense Documentation to ASF 2.0”, merged 2026-06-16。アクセス日 2026-07-19↩︎\nApache Incubator, “Apache Ossie podling status page” の Incubation Work 節。アクセス日 2026-07-19↩︎\n2026-07-19 時点で dev@ossie.apache.org に存在する全28通の件名を確認し、release / vote / rc を含むものを探した結果による。不在の証明であり、本質的に弱い主張である点に留意されたい。私信や Slack での検討までは把握できない↩︎\nApache Incubator, “Incubation Policy — Podling Reporting”（“Podlings SHALL report monthly for their first three months, after that quarterly.”）、アクセス日 2026-07-21↩︎\nApache Incubator, “July 2026 report”（“A new podling, Ossie … was accepted into the Incubator”。詳細報告のあった podling は Caldera, Casbin, Fluss, PonyMail, ResilientDB）、アクセス日 2026-07-21↩︎\nApache Incubator, “Clutch: ossie”、収集日 2026-07-07 UTC 表示。アクセス日 2026-07-21↩︎\nApache Incubator, “Guide to Successful Graduation” / “Release Management”。アクセス日 2026-07-21↩︎\nApache Incubator, “トップページ”。アクセス日 2026-07-21↩︎\nlists.apache.org の統計 API（stats.lua?list=dev&domain=ossie.apache.org&d=lte=3M）による。アクセス日 2026-07-19。個々のスレッドは同アーカイブから辿れる↩︎\napache/ossie Discussion #22（2026-01-15）および Discussion #101（2026-04-06）。いずれもオントロジー層の追加を扱う。#101 のコメントに #22 への参照・重複の指摘は見当たらない。アクセス日 2026-07-21↩︎\nApache Incubator, “Ossie Proposal”, アクセス日 2026-07-19。和訳は筆者による↩︎",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>ASF移管とガバナンス</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/05-ecosystem.html",
+    "href": "chapters/05-ecosystem.html",
+    "title": "6  エコシステムの現状",
+    "section": "",
+    "text": "6.1 参加と実装の落差\n「参加50社超」という数字が独り歩きしている。 本章では、それが実装状況としてどこまで裏付けられるかを、2026-07-19 時点で調べる。\n参加組織は50社を超える1。一方、それを製品として使える状態にした実装は、 成熟度に大きな幅がある。「対応を表明した」ことと「今すぐ使える」ことは別なので、 段階を分けて数える。\n今すぐ本番で使える実装は依然として少ない。 GA は dbt Core 1.12 の1件、 Snowflake は Open Preview（後述)にとどまる。 「参加50社」と「実際に動くもの」の落差は大きいが、 その落差は成熟度の段階に分けて測る必要がある。\n各段階の確認手段と参照文献は 付録 A に整理してある。",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>エコシステムの現状</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/05-ecosystem.html#参加と実装の落差",
+    "href": "chapters/05-ecosystem.html#参加と実装の落差",
+    "title": "6  エコシステムの現状",
+    "section": "",
+    "text": "段階\n意味\n該当（2026-07-19 時点で確認できたもの）\n\n\n\n\nGA\n一般提供\ndbt Core 1.12（import + export、2026-07-16 GA。※変換に制約あり）2\n\n\nOpen Preview\n出荷済みだがプレビュー\nSnowflake（semantic view ↔︎ OSI YAML、2026年6月導入）3\n\n\n有償・限定提供\n公開情報が乏しい\nHoneydew（import 方向、要問い合わせ）4\n\n\n表明・重点領域\n出荷は未確認\nSalesforce/Tableau（OSI を co-lead、双方向交換を重点）5、Databricks（“OSI ready” と表明）6\n\n\n\n\n\n\n\n\n\n図 6.1: 参加と実装の落差（2026-07-19 時点）\n\n\n\n\n\n\n6.1.1 リポジトリ内のコンバータ8本は実装ではない\n仕様リポジトリの converters/ には8本のコンバータがある。\ndbt / gooddata / honeydew / omni / orionbelt / polaris / salesforce / snowflake\nこれを「8社が実装済み」と読むのは誤りである。\n\nいずれも未リリース。PyPI に公開されていないものもある\n全8本が 0.2.0.dev0 を対象としており、出荷版 dbt が受理しないバージョンである\nそもそも公式コンバータの出力が公式バリデータを通らないものがある（セクション 7.3）\n\norionbelt は BlackRock のものと誤解されやすいが、 独立した開発者 Ralf Becher による OBML（OrionBelt Markup Language）である7。 polaris は Apache Polaris（Iceberg カタログ）を指す。\n\n\n6.1.2 主要ベンダーの状況\n主要ベンダーを OSI 対応の観点で個別に見ると、出荷段階に差がある。\n\nSnowflake: semantic view を OSI YAML として書き出す／OSI YAML から semantic view を作る機能を Open Preview で提供している（2026年6月導入）。 公式の preview features に 「Open Semantic Interchange (OSI) YAML format for semantic views」として掲載され、 関数 SYSTEM$CREATE_SEMANTIC_VIEW_FROM_OSI_YAML が挙がっている8。 GA ではなく Open Preview である点に注意\nSalesforce / Tableau: OSI を co-lead し、「metrics・dimensions・hierarchies・ relationships の双方向のメタデータ交換」を初期の重点に挙げている9。 ただし記述は将来形・方針表明が中心で、出荷済みの製品機能としては確認できなかった （該当ヘルプページの本文は取得できず)。Ossie リポジトリには双方向変換器があるが、 jar は 0.1.0-SNAPSHOT で、これ自体は製品機能ではない\nDatabricks: 製品ドキュメント（metric views と YAML リファレンス）に OSI import/export の手順は確認できなかった10。一方、Data + AI Summit 2026 の 自社ブログでは metric views を “Open Semantic Interchange (OSI) ready” と述べている11。 何をもって ready とするかは示されておらず、互換機能の範囲と利用手順は未文書化である\nDremio: Dremio Cloud の changelog（2025-11-12 〜 2026-07-14 の範囲）に該当なし。 製品側の記載は確認できず、自社ブログで Ossie に言及するにとどまる12\nCube: ブログで「オープンアダプタを提供する」と表明してから約10か月経つが、 製品ドキュメントにも Ossie リポジトリにも成果物が見当たらない13\n\n\n\n\n\n\n\nノート「確認できなかった」は不在の証明であって存在しないことの証明ではない\n\n\n\n上記の否定的な判定（Dremio・Cube・Databricks の import/export 未文書化など）は、 調べた範囲での不在であって、本質的に弱い。参照文献と調査範囲は 付録 A に列挙した。 公開情報でも、プレビュー機能などは掲載場所によって見つけにくいことがある。 NDA 下のプライベートプレビューは公開情報に現れない。",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>エコシステムの現状</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/05-ecosystem.html#カタログ製品3社の状況",
+    "href": "chapters/05-ecosystem.html#カタログ製品3社の状況",
+    "title": "6  エコシステムの現状",
+    "section": "6.2 カタログ製品3社の状況",
+    "text": "6.2 カタログ製品3社の状況\nAtlan・Alation・Select Star はいずれもローンチパートナーとして名を連ねているが、 いずれも動く実装を確認できなかった。\nこの3社についてはドキュメント全体を機械的に走査したため、 前節の5社より否定の確度が高い（走査対象と規模は 付録 A）。 検索語 osi / ossie / open semantic interchange に対するヒットは3社とも実質0件で、 apache/ossie のコミット履歴にも3社のドメインからの貢献は存在しない。\n\n6.2.1 出荷されている機能は Snowflake 固有形式に対応するもの\n3社が現に提供している機能を見ると、対応先が揃っている。\n\nAtlan: Context Engineering Studio（Private Preview）。 独自形式を各ターゲットへ射影する設計で、Snowflake へのデプロイ先は Snowflake Semantic View である14\nAlation: 「Data Products App が Snowflake semantic views と双方向連携」 「Extract Semantic Views from Snowflake (Beta)」15\nSelect Star: セマンティックモデル YAML は 「Snowflake Cortex Analyst specification」準拠と明記16\n\n3社とも、接続先は Snowflake の semantic view または Cortex Analyst であり、 ベンダー中立の交換形式を介してはいない。\nこれは各社の姿勢というより、市場の順序として理解できる。 Snowflake は semantic view を実際に出荷しており、 そこに接続すれば顧客の需要に今すぐ応えられる。 一方 Ossie は チャプター 2 で見たとおりリリース版すら固まっておらず、 対応先として選びにくい。すぐ使える実装が乏しい理由も同じところにある。\nただし「市場は Snowflake 固有形式への個別対応だけ」と一般化はできない。 反対材料として、Databricks は自社ブログで Atlan・Collibra・Monte Carlo・Domo・ Hex・Omni などとの連携（出荷済み・計画中を含む)を挙げている17。 Snowflake を軸にした個別対応が目立つのは確かだが、Databricks 側の セマンティック層を軸にした連携群も並行して存在する。\nそのうえで言えるのは、Ossie が解こうとしている「ベンダー中立の交換形式を介した 相互運用」は、現場ではまだ主流になっておらず、各ベンダー固有形式への 個別対応が先行しているということである。\n\n\n6.2.2 発信の時制には幅がある\n各社の発信を並べると、OSI をどの時点の話として語るかに違いがある。\nSelect Star は自社ブログで将来形を使う18。\n\nso they can travel across tools as OSI matures\n（OSI が成熟するにつれて、それらがツール間を行き来できるように）\n\nAtlan の解説記事は現在形である19。\n\nThis portability is backed by the Open Semantic Interchange (OSI) standard\n（この可搬性は Open Semantic Interchange (OSI) 標準に支えられている）\n\nDatabricks の Summit ブログの “OSI ready” も、 準備状態を指すのか出荷済みの機能を指すのか、文面からは判別できない。\n標準への賛同・準備・実装は、それぞれ別の段階である。 発信の場（解説記事・イベント登壇・製品ドキュメント）によって どの段階を語っているかが変わるため、読み分けが要る。\n\n\n\n\n\n\nノートこの分野の情報を読むときの実務的な指針\n\n\n\n導入判断のために「今それが使えるか」を知りたいときは、 製品ドキュメントとリリースノートを見るのが確実である。 プレスリリース・パートナー一覧・解説記事は、 方向性の表明としては有用だが、出荷状況の証拠にはならない。\n本章の否定的な判断は、製品ドキュメントの探索と apache/ossie のコミット履歴という2経路で確認している。 ただしこれは不在の証明であり、本質的に弱い。 調査範囲と限界は 付録 A に明示した。",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>エコシステムの現状</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/05-ecosystem.html#superset-の-sip-182-は-osi-対応ではない",
+    "href": "chapters/05-ecosystem.html#superset-の-sip-182-は-osi-対応ではない",
+    "title": "6  エコシステムの現状",
+    "section": "6.3 Superset の SIP-182 は OSI 対応ではない",
+    "text": "6.3 Superset の SIP-182 は OSI 対応ではない\nApache Superset の SIP-182「Semantic Layer Support」は 2026-06-22 に completed としてクローズし、約26本の PR が master にマージされている20。\nただし2点、注意が要る（確認手段は セクション A.2.3）。\n\n未リリース。superset/semantic_layers/ は 6.2 リリースブランチに存在せず、 master 上のフラグは \"SEMANTIC_LAYERS\": False（# @lifecycle: development）\nOSI 対応ではない。apache/superset を検索しても ossie / open semantic interchange は 0件で、 apache/ossie 側にも Superset コンバータはない。 SIP-182 はセマンティック層一般の基盤であって、OSI の実装ではない\n\nPreset は「Preset と Superset の双方で OSI 形式の export / import を できるようにする作業を進めている」と表明しているが、未来形で日付もない。",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>エコシステムの現状</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/05-ecosystem.html#sec-uc-comparison",
+    "href": "chapters/05-ecosystem.html#sec-uc-comparison",
+    "title": "6  エコシステムの現状",
+    "section": "6.4 意味をどこに置くか — Unity Catalog との対比",
+    "text": "6.4 意味をどこに置くか — Unity Catalog との対比\nセマンティック層をどこに実装するかについて、2つの異なる賭け方が並走している。 一方は自社カタログの内側に作り込み、他方は中立仕様を格納する器として作る。 前者は既に GA し、後者はまだ動いていない。\nDatabricks の Unity Catalog Business Semantics は 2026-04-02 に GA している21。 ただし GA は中核機能（metric views)についてで、materialization や UI authoring など 一部は Preview である。「GA」を全機能一律と読まないほうがよい。\n\n中核は「metric views」\nmetric view の実装を Apache Spark OSS へオープンソース化中（SPARK-54119）\nUnity Catalog OSS にも METRIC_VIEW テーブル型を追加する PR がマージ済み22。 ただしマージはコード上の進展であって、配布リリースへの収録とは別。 4/2 発表時点では OSS への対応を “coming soon” としており、現配布版への収録は未確認\n\n比較にあたって前提を2つ置く。 Ossie はツール間でモデルを受け渡す交換フォーマット、 Unity Catalog Business Semantics は単一ベンダーのセマンティック層の実装であり、 層が異なる。また Databricks は Ossie の参加企業でもあり、実際に貢献している。 競合として並べるのではなく、設計上の選択が分かれた事例として見る。\n違いは、意味の定義をどこに置くかにある。\n\n\n\n\n\n\n\n\n\nUnity Catalog\nPolaris + Ossie\n\n\n\n\n置き場所\nmetric view をテーブル型の一種として既存カタログモデルに組み込む\nOssie 文書を別エンティティ型として持つ\n\n\n状態\nGA（2026-04-02、中核機能）\nエンドポイントは 501、フラグは default false（固定コミット 07be0176 時点。日次で変わりうる）\n\n\n仕様の主体\n自社仕様で先行出荷、OSI 対応も表明\n最初から中立仕様を格納\n\n\n\n読み取れるのは速度と中立性のトレードオフである。\n自社仕様なら設計から出荷まで一社の判断で進められる。 中立仕様を待つなら、仕様が固まるまで実装を出せない。 Ossie が チャプター 2 で見たとおりリリース版すら確定していない状況では、 後者が遅くなるのは構造的に避けがたい。\nしたがって「標準化陣営が周回遅れ」と読むのは、比較の仕方として適切でない。 中立性と速度のどちらを優先したかの違いと見るほうが実態に近い。\nそのうえで問うべきは、中立性のために払った速度のコストに見合うだけの 中立性が実際に得られているかである。 判断材料は チャプター 5 と チャプター 7 にある。",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>エコシステムの現状</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/05-ecosystem.html#カタログ統合はまだ動かない",
+    "href": "chapters/05-ecosystem.html#カタログ統合はまだ動かない",
+    "title": "6  エコシステムの現状",
+    "section": "6.5 カタログ統合はまだ動かない",
+    "text": "6.5 カタログ統合はまだ動かない\nOssie と Apache Polaris の連携は、API の形が決まっただけの段階である。\n\n6.5.1 実装済みのもの\n\napache/ossie の Polaris コンバータ（PR #94、2026-05-12 マージ）。 ただし中身は Iceberg REST Catalog 経由で物理テーブル定義を吸い上げて Ossie YAML の雛形を作るもので、メトリクス定義は往復しない。 実 Polaris への結合テストと往復忠実性の検証は未チェックのままマージされている\napache/polaris の semantic-models OpenAPI 仕様とエンドポイントの器 （PR #4816、2026-07-01 マージ）\n\n\n\n6.5.2 構想・未実装のもの\n以下はいずれも 2026-07-19 時点（apache/polaris の当時の main）での確認であり、 日次で変わりうる。\n\nPolaris の semantic-models エンドポイントは全メソッドが 501 Not Implemented （SemanticModelCatalogAdapter.java の javadoc に明記）\nフィーチャーフラグ ENABLE_SEMANTIC_MODELS は default false\nCRUD 実装 PR #4961 は 2026-07-19 時点で未マージ。RBAC 統合もこの PR の中\nリリース版 Polaris には入っていない。1.5.0 も 1.6.0（2026-07-09）も extensions/ は auth と federation のみ\nROADMAP の “Standalone semantic service / registry” は設計提案すら見つからない\n\n「Ossie モデルが Polaris から discover できる」はまだ動かない。\n\n\n6.5.3 設計は理にかなっている\nエンドポイントは未実装（後述）だが、設計の考え方には見るべきものがある。\nPolaris は Ossie 文書の中身を読まない。 {version, semantic_model} という JSON 文字列を、 そのまま1個の値として保管するだけである。 中に何のメトリクスが定義されているかも、どんなフィールドがあるかも解釈しない。\nこれは手抜きではなく、意図的な切り離しである。\nもし Polaris が Ossie 文書の中身を理解する作りにすると、 Ossie の仕様が変わるたびに Polaris のコードを直してリリースし直す必要が出る。 現状の Ossie は チャプター 2 で見たとおりリリース版すら固まっていないので、 これに追随するのは現実的でない。\n中身を読まなければ、Ossie が 0.1.1 から 0.2.0 へ、さらにその先へ進んでも、 Polaris 側は何も変えずに保管し続けられる。 仕様の進化速度とカタログのリリースサイクルを独立させるための判断である。\n同じ発想は Iceberg にもある。Iceberg のカタログは、テーブルの詳細なメタデータを 自分で持たず、metadata.json へのポインタだけを管理する。 実体の解釈はカタログの外に委ねる。Polaris の Ossie の扱いはその延長線上にある。\n代償もある。中身を読まない以上、カタログ側で 「このメトリクスを含むモデルを探す」といった検索はできない。 保管と受け渡しに徹する設計になる。\nなお両者の接点は Ossie の datasets[].source（db.schema.table 形式）ただ1つで、 参照は Ossie → 物理テーブルの片方向である。 Polaris が Ossie 文書を指すことはあっても、逆はない。\nsemantic-models はパスを /polaris/v1/... に分けて Iceberg REST Catalog の名前空間を汚さず、能力広告だけ Iceberg の Endpoint / catalog config 機構に乗せている。\n一方で ROADMAP が言う “versioning” の実態は限定的である。 Polaris の EntityVersion は楽観的並行制御用の不透明文字列であり、 履歴取得 API はない。監査用途には答えられない。\n\n\n6.5.4 人的なつながり\nOssie の Champion である JB Onofré は Polaris の中心人物でもあり、 Mentor の Russell Spitzer は Iceberg の中心人物である。 カタログ統合が優先課題に上がっている背景には、この人的配置がある。\n\n\n6.5.5 他のカタログ製品\nApache Gravitino については、OSI / セマンティック層の実装を確認できなかった。 リポジトリの Issue / PR を OSI 関連の語で検索した結果はゼロである。 「Gravitino 上に OSI モデルのレジストリを作る」という趣旨のベンダー記述を 検索結果で見かけたが、一次情報で裏が取れなかった。\nUnity Catalog については セクション 6.4 で扱う。",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>エコシステムの現状</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/05-ecosystem.html#footnotes",
+    "href": "chapters/05-ecosystem.html#footnotes",
+    "title": "6  エコシステムの現状",
+    "section": "",
+    "text": "Apache Ossie, “Apache Ossie (Incubating): The New Name for Open Semantic Interchange”, アクセス日 2026-07-19。創設17社から50社超へ拡大した旨の記載による。「参加」は coalition の自己申告的な集計であり、実装企業数ではない。↩︎\ndbt docs: OSI semantic models、アクセス日 2026-07-19。1.12.0 は 2026-07-16 公開（PyPI）。export は未対応構文を落として警告する制約がある。↩︎\nSnowflake, “Preview features”（“Open Semantic Interchange (OSI) YAML format for semantic views”、Open Preview、2026年6月）、アクセス日 2026-07-21。関数は SQL functions index 参照↩︎\nHoneydew は有償製品で、対応の詳細は要問い合わせ。公開ドキュメントからは import 方向・提供形態・対応バージョンを十分に裏付けられなかった。アクセス日 2026-07-19↩︎\nSalesforce, “Ending Semantic Drift” ほか。Tableau Semantics の重点として bi-directional metadata exchange を挙げる。Ossie リポジトリの converters/salesforce（jar 0.1.0-SNAPSHOT）も参照。アクセス日 2026-07-21↩︎\nDatabricks, “What’s new with Unity Catalog at Data + AI Summit 2026”, アクセス日 2026-07-20。原文は “Metrics is also open: it’s open source, available in Apache Spark and Unity Catalog OSS, and its Open Semantic Interchange (OSI) ready.”。和訳は筆者による↩︎\n正典は ralfbecher/orionbelt-semantic-layer、PyPI パッケージ名は orionbelt-semantic-layer。アクセス日 2026-07-19↩︎\nSnowflake, “Preview features”（“Open Semantic Interchange (OSI) YAML format for semantic views”、Open Preview、2026年6月）、アクセス日 2026-07-21。関数は SQL functions index 参照↩︎\nSalesforce, “Ending Semantic Drift” ほか。Tableau Semantics の重点として bi-directional metadata exchange を挙げる。Ossie リポジトリの converters/salesforce（jar 0.1.0-SNAPSHOT）も参照。アクセス日 2026-07-21↩︎\nmetric views / YAML reference、アクセス日 2026-07-19↩︎\nDatabricks, “What’s new with Unity Catalog at Data + AI Summit 2026”, アクセス日 2026-07-20。原文は “Metrics is also open: it’s open source, available in Apache Spark and Unity Catalog OSS, and its Open Semantic Interchange (OSI) ready.”。和訳は筆者による↩︎\nDremio Cloud changelog / Dremio ブログ、アクセス日 2026-07-19↩︎\nCube: semantic layer sync、アクセス日 2026-07-19↩︎\nAtlan, “Deploy to Snowflake（Context Engineering Studio）”, アクセス日 2026-07-19↩︎\nAlation の2026年リリースノート（docs.alation.com/en/latest/releases/releasenotes/）より。走査の範囲は 付録 A↩︎\nSelect Star, “Semantic Models” のドキュメント全文より。走査の範囲は 付録 A↩︎\nDatabricks, “Redefining Semantics” の partner ecosystem 記載より。アクセス日 2026-07-21↩︎\nSelect Star, “Snowflake AI-Ready Semantic Model”, アクセス日 2026-07-19。和訳は筆者による↩︎\nAtlan, “Context Catalog”, アクセス日 2026-07-19。製品ドキュメントではなく解説記事。和訳は筆者による↩︎\napache/superset, “[SIP-182] Semantic Layer Support in Apache Superset”, アクセス日 2026-07-19↩︎\nDatabricks, “Redefining Semantics: The Data Layer for the Future of BI and AI”, アクセス日 2026-07-19↩︎\nunitycatalog/unitycatalog, “PR #1493: Add METRIC_VIEW table type”, アクセス日 2026-07-19↩︎",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>エコシステムの現状</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/06-verification.html",
+    "href": "chapters/06-verification.html",
+    "title": "7  動作確認",
+    "section": "",
+    "text": "7.1 検証の設計\nここまでは文書の読解である。本章は実際に動かした結果を扱う。\n本章の観測はすべて再現可能である。検証スクリプトと実行環境は ossie-playground のルートにあり、 make verify で追試できる（付録 B）。 実行結果の生データはリポジトリの docs/results/track_a.json / track_b.json に出力される。 検証項目ごとの主張と反証条件は本章で順に示す。\n固定の粒度には強弱がある。仕様リポジトリはコミット（07be0176）で固定し、 消費側の dbt-core / dbt-duckdb は == で厳密に固定している。 一方でベースイメージ（python:3.12-slim）はダイジェスト固定しておらず、 一部の依存はバージョン下限（&gt;=）指定で、完全なロックファイルは用意していない。 したがって再ビルドの時期によっては下位依存の版が動きうる。 この固定の限界と、正確な指定（docker/Dockerfile・docker/requirements.txt・ Makefile の OSSIE_COMMIT）は 付録 B に記す。",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>動作確認</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/06-verification.html#検証の設計",
+    "href": "chapters/06-verification.html#検証の設計",
+    "title": "7  動作確認",
+    "section": "",
+    "text": "7.1.1 なぜ2トラックに分けたか\nチャプター 2 で述べたとおり、0.1.1 と 0.2.0.dev0 は 揃っているツールチェーンが異なる。同じ手順を両方に適用することはできない。\n\n\n\n\n0.1.1\n0.2.0.dev0\n\n\n\n\n公式スキーマ\nあり（タグ osi-0.1.1-rc1）\nあり（main）\n\n\n公式サンプル\nなし\n2本\n\n\nconverters/ 8本\n対象外\n全8本がこちら\n\n\n出荷版 dbt Core 1.12\n受理\n拒否\n\n\n\nそこで2つの経路をそれぞれ別に検証した。\nトラックA（0.1.1） — 手書きの準拠文書 → 公式バリデータ → dbt 取り込み → dbt run。 本検証の2トラックの中で、端から端まで通せた唯一の経路である （他のコンバータや osi-to-msi 方向、dbt Fusion 等は検証していない）。 公式サンプルが存在しないため入力は自作せざるを得ない。\nトラックB（0.2.0.dev0） — 公式コンバータで dbt から生成 → 公式バリデータ → dbt 取り込み。 生成側の経路。\n\n\n7.1.2 運用ルール\n検証計画を先に固定し、 各項目について主張・手順・裏付けとなる観測・反証となる観測を事前に書いた。\n特に重要なルールが1つある。 投入する文書はすべて公式バリデータを通してから実装に食わせる。\n仕様に適合しない文書を実装に読ませると、実装がそれをどう扱おうと 「実装の性質」としては解釈できない。仕様準拠を先に保証しておかないと、 観測されたものが仕様由来か実装由来かを切り分けられなくなる。\n\n\n7.1.3 環境\n\n\n\n項目\n値\n\n\n\n\n仕様\napache/ossie @ 07be0176 / 比較タグ osi-0.1.1-rc1\n\n\n消費側\ndbt Core 1.12.0 / dbt-duckdb 1.10.1 / metricflow 0.211.0\n\n\n実行環境\npython:3.12-slim コンテナ\n\n\n\n消費側の版は、dbt-core==1.12.0 を起点に依存範囲から解決された結果であり、 metricflow 0.211.0 もその解決で入った版である（明示的に固定して同梱したものではない）。\nすべて Docker 上で動かし、ホストには何も入れていない。 必要なのは docker だけである。再現手順は 付録 B。\n\n\n\n\n\n\nノート本章の観測はスナップショット時点のもの\n\n\n\n本章の結果は、いずれも固定コミット 07be0176（2026-07-17）に対するものである。 その後の 2026-07-20、main には複数のコミット （0.2.0.dev0 のスナップショットファイル追加、Snowflake のクォート付き識別子対応 #233 ほか）が入っている。 これらが後述の往復問題（セクション 7.3）を解消したかどうかは未確認であり、 本章の観測には反映していない。\n\n\n\n\n\n\n\n\nノート検証中は外部ネットワークから切り離している\n\n\n\n検証を走らせるコンテナは、Docker の設定（network_mode: none）で 外部と通信できない状態にしてある。実行中にパッケージを取りに行ったり、 仕様リポジトリを引き直したりできない。\n理由は結果の再現性である。実行のたびに外部から何かを取得していると、 上流が変わった瞬間に結果が変わり、しかもそれに気づけない。 通信を断てば、結果を左右するのは 固定したコミット（07be0176）とコンテナイメージだけになる。\n外部を使うのは事前準備の一度だけで、仕様リポジトリを 固定コミットで取得する make spec がそれにあたる。 以降の make verify は取得済みのものだけを見る。\n副次的な効果として、dbt が起動時に最新版を確認しようとして失敗する （The latest version of dbt-core could not be determined!）。 これは切り離しが効いていることの確認にもなる。",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>動作確認</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/06-verification.html#結果の概要",
+    "href": "chapters/06-verification.html#結果の概要",
+    "title": "7  動作確認",
+    "section": "7.2 結果の概要",
+    "text": "7.2 結果の概要\n検証は6項目。各項目は「こうなっているはずだ」という主張を先に立て、 それが観測で裏付けられるか、あるいは覆されるかを見る形で設計した。\n\n\n\n\n\n\n\n\n項目\n何を確かめたか\n結果\n\n\n\n\nV1\n構造が同じ文書でも、バージョン文字列の違いだけで相互に受け付けられなくなるか\n裏付けられた。加えて別の要因も判明\n\n\nV2\n実装は、公式スキーマが禁じている書き方を受け入れてしまうか\n裏付けられた。警告も出ない\n\n\nV3\n型情報を持たないディメンションを、実装はどう解釈するか\n数値と文字列が区別されなかった\n\n\nV4\nメトリクスの集約式は、実装のモデルへどう写像されるか\n集約関数が脱落。実行しての確認はできなかった\n\n\nV5\n仕様に書かれていない前提が、取り込みに必要になるか\n3件必要だった\n\n\nV6\n公式コンバータの出力を、出荷版の実装は受け取れるか\n受け取れない。想定していなかった要因が2つあった\n\n\n\n全体として、主張はおおむね裏付けられた。ただし V4 は実行環境の制約で 最後まで確認できず、V6 は事前に想定していたのと別の理由でも失敗した。 以下、順に見ていく。",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>動作確認</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/06-verification.html#sec-verification-roundtrip",
+    "href": "chapters/06-verification.html#sec-verification-roundtrip",
+    "title": "7  動作確認",
+    "section": "7.3 本検証構成では dbt を挟んだ往復が成立しない",
+    "text": "7.3 本検証構成では dbt を挟んだ往復が成立しない\n本章で最も紙幅を割く結果である。\n仕様リポジトリ同梱の公式コンバータ（ossie-dbt msi-to-osi）で dbt プロジェクトから OSI 文書を生成し、同じ dbt に戻せるかを試した。 以下は固定コミット 07be0176・dbt-core 1.12.0・本検証の入力に対する観測であり、 製品やアダプタ、現行 main を横断する一般命題ではない。\n\n\n\n\n\n\n図 7.1: 往復の破綻\n\n\n\nこの構成では、少なくとも3つの要因が重なって往復が成立しなかった。 以下の3つはそれぞれ別の層で起きており、いずれか1つを直しても残りで止まる。\n\n7.3.1 破綻1: 公式コンバータの出力が、同一コミットの公式スキーマで落ちる\n[Schema] (root): Additional properties are not allowed ('dialects' was unexpected)\nコンバータはルート直下に dialects: [\"ANSI_SQL\"] を出力する。 これは 0.1.1 のルート構造であり、0.2.0.dev0 では削除されている（セクション 4.6）。\nにもかかわらずコンバータは version: \"0.2.0.dev0\" を出力する （converters/dbt/src/ossie_dbt/msi_to_osi.py L124 のハードコード。 tests/test_msi_to_osi.py でもこの値がアサートされている）。\nつまりコンバータの出力は、ルート構造は 0.1.1 のまま、version 文字列だけ 0.2.0.dev0 という 組み合わせになっている。この文書は、同一コミットの公式バリデータ（0.2.0.dev0 スキーマ）を通らない。\n\n\n7.3.2 破綻2: バージョン文字列で拒否される\nOSI file '...' uses unsupported version '0.2.0.dev0'.\nSupported versions: ['0.1.0', '0.1.1']\ndbt 側の受理集合は、インストールされた dbt/constants.py に SUPPORTED_OSI_VERSIONS = frozenset({\"0.1.0\", \"0.1.1\"}) として定義されている （dbt-core 1.12.0。検証環境内で確認）。 この制約は dbt のドキュメントにも “OSI documents must use version 0.1.0 or 0.1.1” （OSI 文書はバージョン 0.1.0 または 0.1.1 を用いなければならない）と明記されている。\n\n\n7.3.3 破綻3: source の形式が一致しない\nバージョンを 0.1.1 に書き換えると 0.1.1 スキーマは通過する。 しかし dbt はなお拒否する。\ncontains dataset 'orders' (\"ossie_track_a\".\"main\".\"orders\") that does not match\nany dbt model in this project.\nコンバータは source を '\"db\".\"schema\".\"table\"' と識別子をクォートして出力する。 dbt の突き合わせはクォートなしを期待する。 手書きの ossie_track_a.main.orders は問題なく通った。\n仕様は source を「database.schema.table 形式または query」としか定めておらず、 クォートの扱いを規定していない（チャプター 4）。\nエラーメッセージの (\"ossie_track_a\".\"main\".\"orders\") という表記と、 クォートなしの手書き文書が通ったことから、クォートの有無が拒否の要因である可能性が高い。 ただし本検証はクォート以外の差分を厳密に統制したうえでの一点比較ではないため、 これは原因の確定ではなく有力な観測として扱う。\n\n\n7.3.4 帰結\nこの構成では、dbt → OSI → dbt の往復が成立しなかった。 3つの要因はそれぞれ別の層で起きており、どれか1つを直しても残りで止まる。 ここで言えるのはこの検証構成についてであり、製品・アダプタ・現行 main を 横断する一般命題ではない。\n\n\n\n\n\n\nノート障害の性質\n\n\n\n3つの原因はいずれも、バージョン管理・出力形式・識別子の表記といった 取り決めの層にある。メトリクスの意味をどう表現するかという 設計上の難問とは別の種類の問題である。\nこうした食い違いは、仕様と実装が並行して動いている時期には起こりやすい。 バージョンを進める、スキーマを整理する、コンバータを直すという作業が それぞれ別のタイミングで行われれば、その間に齟齬が生じる。\n裏を返せば、取り決めを揃えれば解消しうる種類でもある。",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>動作確認</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/06-verification.html#sec-verification-loss",
+    "href": "chapters/06-verification.html#sec-verification-loss",
+    "title": "7  動作確認",
+    "section": "7.4 取り込み時に情報が落ちる",
+    "text": "7.4 取り込み時に情報が落ちる\n手書きの 0.1.1 準拠文書は、公式バリデータを通り、dbt に取り込まれ、 dbt run まで到達した。経路がまったく動かないわけではない。\nただし取り込みの過程で情報が落ちる。\n\n\n\n\n\n\n図 7.2: 取り込み時の情報欠落\n\n\n\n\n7.4.1 型情報が運ばれない\nOSI の dimension は is_time（時間軸かどうか）という真偽値しか持たない（チャプター 4）。 数値なのか文字列なのかを示す欄がない。\n取り込ませた結果はこうなった。\n\n\n\nOSI 側の宣言\ndbt での分類\n\n\n\n\norder_id（primary_key）\nentity (primary)\n\n\nstatus（文字列カラム、is_time=false）\ndimension: categorical\n\n\namount（数値カラム、is_time=false）\ndimension: categorical\n\n\nordered_at（is_time=true）\ndimension: time\n\n\n\n数値の amount と文字列の status が、同じ categorical になっている。\n\n\n\n\n\n\nノートcategorical とは何か、なぜ問題か\n\n\n\nセマンティック層では、列を大きく2つの役割に分ける。\n\nディメンション: 集計を「切る」ための軸。ステータス別、月別、地域別\nメジャー: 集計「される」数量。売上金額、件数\n\ncategorical（カテゴリカル）とは、 取りうる値の種類で分類するタイプのディメンションを指す。 「shipped / pending / cancelled」のようなラベルがこれにあたる。\n金額である amount が categorical と解釈されると、 「金額の値ごとに行を切り分ける軸」として扱われることになる。 100.50円のグループ、250.00円のグループ、という具合である。 本来は合計したい数量なので、意図とずれる。\ndbt は source を辿れば物理テーブルの列型を見に行けるが、 そこまではしていない。OSI 文書に書かれた情報だけで判断している。\n\n\n型情報を運ぶ欄が仕様にない以上、消費側が物理テーブルを見に行くか、 名前から推測するしかない。どちらを期待するかも仕様は定めていない。\n\n\n7.4.2 集約関数が脱落する\nOSI 文書に2つのメトリクスを書いた。売上の合計と、受注の件数である。\nmetrics:\n  - name: total_revenue\n    expression:\n      dialects: [{ dialect: ANSI_SQL, expression: \"SUM(orders.amount)\" }]\n  - name: order_count\n    expression:\n      dialects: [{ dialect: ANSI_SQL, expression: \"COUNT(orders.order_id)\" }]\n取り込んだ結果がこれである。\n\n\n\n\n\n\n\nOSI 側の宣言\ndbt 側の結果\n\n\n\n\nSUM(orders.amount)\ntype=simple, expr=amount, measure=None, input_measures=[]\n\n\nCOUNT(orders.order_id)\ntype=simple, expr=order_id, measure=None, input_measures=[]\n\n\n\nSUM と COUNT が消えている。 残ったのは対象の列名（amount / order_id）だけで、 「合計する」「数える」という集約の指示が失われた。 2つのメトリクスは対象列こそ違うものの、いずれも type=simple で集約関数を持たない、 同じ骨格になっている。これは取り込み後の manifest 上での観測であり、 実行時にどう出るかは後述のとおり未確認である。\n\n\n\n\n\n\nノートなぜこうなるのか\n\n\n\nセクション 4.2 で見たとおり、Ossie と dbt/MetricFlow では 集約の置き場所が違う。\ndbt/MetricFlow の考え方は、まずテーブルの中に 「amount を合計したもの」という名前付きの部品（measure）を作り、 メトリクスはその部品を指す、というものである。 メトリクスの定義は「どの部品を使うか」だけを持ち、 どう集約するかは部品の側が知っている。\nOssie の考え方は、部品を作らず、 メトリクスの式に直接 SUM(...) と書く。\nそのため OSI 文書を dbt に取り込むと、 メトリクスが指すべき「部品」が存在しない。 measure=None、input_measures=[] はその状態を表している。 式から SUM を取り出して部品を組み立てる処理は行われず、 中身の列名だけが expr に残った、と読める。\n\n\nこれは仕様の不備というより、2つの設計が噛み合っていないことの現れである。 どちらの置き方が良いかは セクション 4.8 で議論が続いており、 結論は出ていない。\n\n\n7.4.3 実行検証はできなかった\n計画では「取り込んだメトリクスが実際に計算できるか」まで確認するはずだった。 出荷版ツールチェーンでは実行できない。\n\ndbt-core 1.12.0 単体にメトリクスをクエリするコマンドはない\n依存として入った metricflow 0.211.0 はライブラリのみでコンソールスクリプトを持たない\nクエリ用の dbt-metricflow（最新 0.13.0）は dbt-core&lt;1.12.0,&gt;=1.10.4 を要求し、1.12.0 を明示的に除外している （PyPI のメタデータ、アクセス日 2026-07-19）\n\nOSI インポートが載ったバージョンでは、その結果をローカルでクエリできない。\nしたがって集約関数の脱落が実行時にどう出るかは未確認であり、 マニフェスト上の観測にとどめる。",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>動作確認</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/06-verification.html#実装が公式スキーマより緩く受ける場合がある",
+    "href": "chapters/06-verification.html#実装が公式スキーマより緩く受ける場合がある",
+    "title": "7  動作確認",
+    "section": "7.5 実装が公式スキーマより緩く受ける場合がある",
+    "text": "7.5 実装が公式スキーマより緩く受ける場合がある\nField は additionalProperties: false である。 Field に仕様外のキーを1つ足した文書を用意すると、次のようになった。\n\n\n\n検証者\n結果\n\n\n\n\n公式バリデータ（0.1.1）\n拒否\n\n\ndbt Core 1.12.0\n受理。この追加キーについて警告は出なかった\n\n\n\n寛容なパースは設計判断としてありうる。ただしこの観測は、 検証した「Field への追加キー」という一点についてのものである。\ndbt は、未対応の要素を落とす際に警告（I078）を出す仕組みを持つ。 今回の追加キーではその警告が出なかった、というのがここでの観測であり、 「dbt はいかなる仕様違反も無警告で受ける」という一般化はできない。 少なくともこの追加キーに関しては、利用者が仕様違反に気づく手がかりが得られなかった。\nこの項目の主張と反証条件も、他と同様に事前に定めてある。",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>動作確認</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/06-verification.html#仕様が定めていない前提",
+    "href": "chapters/06-verification.html#仕様が定めていない前提",
+    "title": "7  動作確認",
+    "section": "7.6 仕様が定めていない前提",
+    "text": "7.6 仕様が定めていない前提\nOSI 文書を dbt に取り込むには、仕様に記述のない要件が3つ必要だった。\n\n.json のみ走査される。 dbt は指定された osi-paths（既定では OSI/）配下を rglob(\"*.json\") で探す（dbt-core 1.12.0 の dbt/parser/osi.py。検証環境内で確認）。 OSI/ に YAML を置いても無視され、parse は成功する（観測済み）。 複数パスの指定はできるが、依存パッケージ内に置かれた OSI 文書は走査対象にならない。 一方、本検証で用いた仕様の公式サンプルは YAML であり、 固定コミットのコンバータを CLI で実行した出力も YAML だった （コンバータが YAML のみを出すのか、他形式が既定なのかまでは未確認）\ntime spine モデルが要る。 メトリクスを含む文書を取り込むと、 MetricFlow が granularity DAY 以下の time spine モデルを要求する。 OSI 仕様に該当する概念はない\nsource が dbt 管理下のモデルと一致する必要がある。 (database, schema, alias) で一致しなければならず、外部テーブルは参照できない\n\nいずれも、OSI に適合しているだけでは dbt での取り込みは保証されないことを示している。 仕様の外にある消費側の事情を満たさなければ通らない。",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>動作確認</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/06-verification.html#この検証で確かめられなかったこと",
+    "href": "chapters/06-verification.html#この検証で確かめられなかったこと",
+    "title": "7  動作確認",
+    "section": "7.7 この検証で確かめられなかったこと",
+    "text": "7.7 この検証で確かめられなかったこと\n\nメトリクス実行時の挙動（ツールチェーン上不能）\n0.1.0 を消費側が受理する一方、それに対応する公式スキーマ成果物を どこで検証できるのかが判然としない。dbt は 0.1.0 を受理集合に含めるが、 仕様リポジトリの Version History には 0.1.0 の記載が見当たらない。 「消費側が受理を表明する版を、どの公式成果物で検証できるか」という 相互運用上の論点として残る\n他の7つのコンバータの出力が同様の問題を持つか（dbt のみ検証）\nosi-to-msi 方向。dbt 同梱の metricflow.converters.osi_to_msi と リポジトリの ossie_dbt.osi_to_msi の関係も未確認",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>動作確認</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/07-assessment.html",
+    "href": "chapters/07-assessment.html",
+    "title": "8  評価と展望",
+    "section": "",
+    "text": "8.1 現在地\n本章は前章までの観察を総合したものであり、新規の事実提示はほとんど行わない。 各主張の根拠は、参照先として示した章と、そこから辿れる出典にある。\n掲げられている「Write Once, Query Anywhere」は、まだ実現していない。\n動作確認では、同じ dbt を挟んだ往復——公式エクスポータの出力を 出荷版インポータが読む——が成立しなかった。 しかも原因が3つ独立に立つため、どれか1つを直しても通らない （セクション 7.3）。\n一方で、リリース版に準拠して手で書いた文書は、 公式バリデータを通り、dbt に取り込まれ、実行まで到達している。 経路そのものは存在する。\n観測された障害は性質が異なる3種類に分かれ、 それぞれ解けやすさが違う。",
+    "crumbs": [
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>評価と展望</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/07-assessment.html#現在地",
+    "href": "chapters/07-assessment.html#現在地",
+    "title": "8  評価と展望",
+    "section": "",
+    "text": "8.1.1 (1) 運用規約の未整備\n\nバージョン文字列を const で固定した結果、構造的にほぼ同じ文書が相互に排除される\n公式コンバータが 0.1.1 時代の構造に 0.2.0.dev0 のラベルを貼っている\nsource の識別子クォートの扱いを仕様が定めていない\n\nこれらは仕様の設計を変えずに解消できる種類である。 バージョンの進め方、コンバータの追随、識別子表記の規定といった 取り決めを揃えれば片付く。\n\n\n8.1.2 (2) 仕様そのものの設計上の制約\n一方、次の2つは規約では解けない。\n\ndimension が is_time しか持たず、型情報を運ばない。 数値と文字列が区別できない（セクション 7.4）\nフィールドレベルの measure を持たない設計が、消費側のモデルと噛み合わない。 OSI は集約を metrics の式として持つが、MetricFlow は measure への参照を前提とする。 結果として集約関数が写像で脱落する\n\nこれらは仕様を変更しなければ解決せず、しかもどう変更すべきかが難しい。\n型情報を運ぶ欄を足すのは一見簡単に見えるが、 どこまで型を持たせるかは設計判断である。物理層の型をそのまま写すのか、 論理的な型を別に定めるのか、消費側に推論させるのか。 セクション 4.8 で見た「構造化するか、消費側に委ねるか」という軸が、 ここでも効いてくる。\nmetrics と measures の置き場所はさらに難しい。 既存の主要な実装が揃って一方を採っているなかで、 Ossie が別の設計を選んでいる。どちらにも理由があり、 ワーキンググループでも結論が出ていない。\n\n\n8.1.3 (3) エコシステムの薄さ\n製品として動く実装が2件のみで、うち1件は有償・要問い合わせ。 取り込んだメトリクスをローカルでクエリする手段さえない。\nこれは (1)(2) の結果でもあり、原因でもある。実装が増えなければ 規約の不備も設計の噛み合わなさも表面化せず、修正されない。\n\n\n8.1.4 見通し\n\nは取り決めの問題なので、時間と手当てで解ける見込みがある。\nは設計判断を要する。技術的にも難しい問題であり、 時間をかければ自然に解けるものではない。 そして難しい設計判断ほど、それを決める場が機能しているかどうかに左右される。",
+    "crumbs": [
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>評価と展望</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/07-assessment.html#運営の側から見ると",
+    "href": "chapters/07-assessment.html#運営の側から見ると",
+    "title": "8  評価と展望",
+    "section": "8.2 運営の側から見ると",
+    "text": "8.2 運営の側から見ると\nチャプター 5 の観察と重ねると、もう一つの面が見えてくる。\n運営の仕組みは、まだ立ち上がっている途中である。\n\nASF 移管から4週間。Apache Release はまだなく、署名鍵も未登録\n仕様変更の [VOTE] は実行された記録がない\n仕様の議論は GitHub Discussions で行われ、 中核的な意味論の一部は Google Docs と Slack にある\nML のアーカイブにも不備がある（プロジェクト側も認識している）\n\nこれらは、移管から日が浅いことを踏まえて読む必要がある。 ASF のガバナンスに沿った運営が定着するには通常それなりの期間を要し、 incubation 初期の podling が同様の状態にあることは珍しくない。 mentor から是正が入る典型的な段階でもある。\nそのうえで、チャプター 2 で見た 「ワーキンググループ一覧が公式内で3系統に食い違う」という現象や、 バージョン管理の食い違いは、何を正とするかが定まりきっていないことの表れと見える。\n0.1.1 と 0.2.0.dev0 のどちらを基準にするのか、 コンバータはどちらに追随するのか、公式サンプルはどちらで書かれるべきか。 これらは技術的な難問ではなく、決めれば済むことである。 決める場の整備が追いついていない、という順序で理解するのが妥当だろう。",
+    "crumbs": [
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>評価と展望</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/07-assessment.html#導入判断",
+    "href": "chapters/07-assessment.html#導入判断",
+    "title": "8  評価と展望",
+    "section": "8.3 導入判断",
+    "text": "8.3 導入判断\n現時点で本番採用する理由は乏しい。\n\n製品として動く実装は2件のみ（dbt Core 1.12、Honeydew）\n仕様のリリース版は 0.1.1 だが、公式サンプルもコンバータもそちらを向いていない\n取り込み時に型情報と集約関数が落ちる。しかもローカルでクエリ検証する手段がない\nカタログ統合（Polaris）は 501 のまま\n\n一方で、注視する価値はある。直近数週間で実質的な変化が続いているためだ。\n\n\n\n\n\n\n\n\n日付\n出来事\n参照\n\n\n\n\n2026-06-22\nASF Incubator 入り\nチャプター 5\n\n\n以降4週間\nmerged PR 32本（それ以前は月5本程度）\nチャプター 5\n\n\n2026-07-15\nexpression_language.md が main に追加\nセクション 4.7\n\n\n2026-07-16\ndbt Core 1.12 で import + export が GA\nチャプター 6\n\n\n\n\n\n\n\n\n\nノートこのレポートは古びやすい\n\n\n\n上記の最後の2件は、本調査（2026-07-19）の3〜4日前の出来事である。 これは「動きが速い」ことの証拠というより、 本レポートが短期間で陳腐化しうることを意味する。\n特に チャプター 7 の結果は、 dbt-metricflow の対応バージョンが変われば、 あるいは公式コンバータの出力が修正されれば、そのまま覆る。\n\n\n現実的な向き合い方としては、以下が妥当だろう。\n\n今すぐ乗るのではなく、自社のセマンティックモデルを Ossie で表現できる形に保っておく。仕様の構造は素直で、 dbt / Cube / LookML などから機械的に写像できる範囲にある\n特定ベンダーのセマンティック層に固有機能で深く依存しない。 依存する場合は custom_extensions に落ちる部分がどこかを把握しておく\nセクション 6.4 で見たとおり、中立性を取れば速度は落ちる。 今必要な機能があるなら、単一ベンダーの実装を選ぶのは合理的な判断でありうる",
+    "crumbs": [
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>評価と展望</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/07-assessment.html#何を見ていれば状況が分かるか",
+    "href": "chapters/07-assessment.html#何を見ていれば状況が分かるか",
+    "title": "8  評価と展望",
+    "section": "8.4 何を見ていれば状況が分かるか",
+    "text": "8.4 何を見ていれば状況が分かるか\n技術・運営の両面が絡むため、片方だけを見ても状況は掴めない。 以下は、いずれも公開情報から判定できる指標である。\nガバナンス\n\n初回の Apache Release が出るか。 PGP 署名鍵の登録が前段階になる\n仕様変更が ML の [VOTE] を通るようになるか。 所属に関係なく反対意見が検討され、理由付きの合意が記録されれば、中立な運営の実証になる\nGoogle Docs と Slack にある決定がリポジトリへ戻るか\n8月以降の月次 podling report の内容（mentor の応答性・リリース計画）\n創設企業以外からの committer 昇格\n\n技術・エコシステム\n\n0.1.1 と 0.2.0.dev0 の分裂が解消されるか。 具体的には、公式サンプルとコンバータがリリース版を向くか、 あるいは 0.2.0 が正式リリースされるか\n公式コンバータの出力が公式バリデータを通るようになるか（現状は通らない）\ndbt-metricflow が dbt-core 1.12 系に対応し、 取り込んだメトリクスをクエリできるようになるか\nPolaris の ENABLE_SEMANTIC_MODELS が default true になり、 リリース版に入るか\ndbt と Honeydew 以外の3例目の実装が出るか",
+    "crumbs": [
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>評価と展望</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/07-assessment.html#総括",
+    "href": "chapters/07-assessment.html#総括",
+    "title": "8  評価と展望",
+    "section": "8.5 総括",
+    "text": "8.5 総括\nOssie が取り組んでいる問題——指標定義の断片化——は実在する。 AI エージェントが指標を参照して判断を下すようになれば、 定義の不一致は気づかれないまま下流へ伝播する（チャプター 3）。 共通の記述形式を持つ価値は上がっている。\n2026年7月時点では、標準として依拠できる段階にはない。 理由は一つではなく、少なくとも3つが重なっている。\n技術的な難しさ。 型情報をどこまで仕様に持たせるか、 集約の定義をどこに置くか、方言差をどう吸収するかは、 いずれも設計判断を要する問題である。 既存のセマンティック層が別々の答えを出してきたことからも分かるとおり、 自明な正解はない。概念的相互運用に至っては、 プロジェクト自身が未解決と認めている。\n運営の未成熟。 何を正とするかを決める場が、まだ機能しきっていない。 バージョン管理や公式コンバータの食い違いは、 技術的に難しいからではなく、決めて揃える工程が追いついていないために生じている。\nエコシステムの薄さ。 実装が2件にとどまるため、 仕様の不備も設計の噛み合わなさも表面化しにくい。 実装が増えれば問題は顕在化し、修正の圧力もかかる。\n3つは互いに絡んでいる。技術的に難しい判断ほど合意形成の場を要し、 場が整わなければ判断は先送りされ、実装は増えない。\nASF への移管は、このうち運営の側に効く手当てである。 方向としては妥当で、受入プロセスに外部のレビューが挟まることも確認できた。 ただし移管から4週間で成果を判定するのは早い。\n判定の材料が揃うのは、8月以降の月次 podling report と、 初回 Apache Release の頃になるだろう。",
+    "crumbs": [
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>評価と展望</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/07-assessment.html#本レポートの限界",
+    "href": "chapters/07-assessment.html#本レポートの限界",
+    "title": "8  評価と展望",
+    "section": "8.6 本レポートの限界",
+    "text": "8.6 本レポートの限界\n\n2026-07-19 の一時点のスナップショットである。この分野の動きは速い\n動作確認の消費側は dbt Core 1.12 のみ。Honeydew は有償・要問い合わせのため入手できず、 他の実装は存在しない\nメトリクスの実行時挙動は確認できていない（チャプター 7）\n否定的な結論は不在の証明であり本質的に弱い。調査範囲は 付録 A に明示した\n筆者は Ossie の開発に関与しておらず、 ML や Slack の非公開のやりとりを見ていない",
+    "crumbs": [
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>評価と展望</span>"
+    ]
+  },
+  {
+    "objectID": "appendix/method.html",
+    "href": "appendix/method.html",
+    "title": "付録 A — 調査方法と範囲",
+    "section": "",
+    "text": "A.1 出典の階層\n本レポートには「対応が確認できなかった」という否定的な主張が複数ある。 これは不在の証明であり、本質的に弱い。何をどこまで調べたのかを開示して、 読者が確度を判断し追試できるようにする。",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>調査方法と範囲</span>"
+    ]
+  },
+  {
+    "objectID": "appendix/method.html#出典の階層",
+    "href": "appendix/method.html#出典の階層",
+    "title": "付録 A — 調査方法と範囲",
+    "section": "",
+    "text": "階層\n内容\n扱い\n\n\n\n\nTier 1\nASF 公式（incubator.apache.org, lists.apache.org, cwiki, dist.apache.org）、仕様リポジトリ\n事実認定の根拠とする\n\n\nTier 2\nプロジェクト広報（ossie.apache.org）\nASF インフラ上だが PPMC 自身の広報文。主張として扱う\n\n\nTier 3\nベンダーブログ、業界メディア\n事実関係は Tier 1 で裏を取る。単独では根拠としない",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>調査方法と範囲</span>"
+    ]
+  },
+  {
+    "objectID": "appendix/method.html#ベンダーの実装状況をどう調べたか",
+    "href": "appendix/method.html#ベンダーの実装状況をどう調べたか",
+    "title": "付録 A — 調査方法と範囲",
+    "section": "A.2 ベンダーの実装状況をどう調べたか",
+    "text": "A.2 ベンダーの実装状況をどう調べたか\n「参加している」と「実装している」を区別することを最優先に置いた。 参加表明・プレスリリース・パートナー一覧への掲載は、いずれも実装の証拠ではない。\n判定は次の順序で行った。\n\n製品ドキュメントに OSI / Ossie の記載があるか\n記載がある場合、それが export / import のどちらか、 GA か preview か、対応する仕様バージョンは何か\napache/ossie への貢献があるか（コミット作者のメールドメイン、Issue/PR）\n\n\nA.2.1 網羅的に走査した3社\nドキュメント全体を機械的に取得して検索したため、否定の確度が比較的高い。\n\n\n\n\n\n\n\n\n\n製品\n走査対象\n規模\nOSI 関連のヒット\n\n\n\n\nAtlan\ndocs.atlan.com サイトマップ全 URL\n2,815 URL\n0件（4件は誤検出）\n\n\nAlation\ndocs.alation.com/en/latest/searchindex.js（Sphinx 検索インデックス全体）\n3.0 MB\n0件（2件は “dossier” の部分一致）\n\n\nSelect Star\ndocs.selectstar.com/llms-full.txt（ドキュメント全文）\n408 KB\n0件\n\n\n\n検索語は osi / ossie / open semantic interchange / interchange。 Alation は2026年のリリースノート3本（528 KB / 323 KB / 534 KB）も個別に確認した。 Select Star は llms.txt、changelog.md、features/semantic-models.md、 および 2.5 MB の過去 changelog も確認した。\n参照した主な URL は本節の表と、第5章の各脚注に示したとおりである。\n\n\nA.2.2 関連ページを個別に確認した5社\nこちらは網羅的走査を行っていない。関連が見込まれるページと リリースノートを個別に参照したにとどまるため、否定の確度は上記3社より低い。\n\n\n\nベンダー\n参照した文献\n\n\n\n\nSnowflake\nsemantic views overview / feature releases 2026 / Tableau TDS 対応の release note / converters/snowflake\n\n\nDatabricks\nmetric views / metric views YAML reference\n\n\nDremio\nDremio Cloud changelog（2025-11-12 〜 2026-07-14 の範囲）/ self-serve semantic layer / Dremio ブログ\n\n\nCube\nsemantic layer sync\n\n\nSalesforce / Tableau\nSalesforce semantic layer guide / Tableau Semantics / converters/salesforce\n\n\n\nいずれもアクセス日は 2026-07-19。\n\n\nA.2.3 Superset SIP-182 の確認手段\nSuperset については「マージ済みだが未リリース」「OSI 対応ではない」という 2つの判断をしている。根拠は以下のとおり。\nマージ済みであること\n\nIssue #35003（SIP-182） が 2026-06-22 に completed としてクローズされている\n関連 PR 約26本（#37815 セマンティック層拡張、#37816 モデル/DAO、 #37817 Explore 統合、#38370 API、#38376 UI、#40475 ダッシュボードフィルタ、 最終は #42093、2026-07-15）が master にマージ済み\n\n未リリースであること\n\nsuperset/semantic_layers/ が 6.2 リリースブランチに存在しない （GitHub API でパスを問い合わせて 404）\nアプリの最新タグは 6.1.0（2026-05-01）で、その config.py に SEMANTIC_LAYERS フラグが存在しない\nmaster の superset/config.py では \"SEMANTIC_LAYERS\": False に # @lifecycle: development の注記が付く\nCHANGELOG/6.1.0.md にセマンティック層関連の項目がない\n\nOSI 対応ではないこと\n\napache/superset に対する ossie / open semantic interchange の コード検索がいずれも 0 件\nOSI の語は散文中に1度、セマンティック層の一例として名前が挙がるのみ\napache/ossie の converters/ に Superset 向けのものがなく、 Superset に言及する Issue もない\n\nPreset（Superset の商用提供元）の表明\n\nパートナーページに “We’re working to ensure Preset and Apache Superset™ can both export and import semantic definitions in the OSI format.”（Preset と Apache Superset の双方が OSI 形式でセマンティック定義を export / import できるよう取り組んでいる）とある。 未来形で、日付の記載はない\nPreset のセマンティック層ドキュメントは 自社のデータセットとメトリクスを説明しており、OSI への言及はない\n\nいずれもアクセス日 2026-07-19。和訳は筆者による。\n\n\nA.2.4 リポジトリ側の確認\napache/ossie について次を確認した。\n\n全コミットの作者メールドメイン（API を5ページ分、計500件まで取得）\nIssue / PR の全文検索（repo:apache/ossie+&lt;vendor&gt;）\nconverters/ 配下のディレクトリ構成と各コンバータが対象とする仕様バージョン\nGitHub Releases、タグ一覧",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>調査方法と範囲</span>"
+    ]
+  },
+  {
+    "objectID": "appendix/method.html#否定的結論の限界",
+    "href": "appendix/method.html#否定的結論の限界",
+    "title": "付録 A — 調査方法と範囲",
+    "section": "A.3 否定的結論の限界",
+    "text": "A.3 否定的結論の限界\n以下は本レポートの主張の弱点として明示しておく。\n\nNDA 下のプライベートプレビューは公開情報に現れない。 非公開で実装が進んでいる可能性は排除できない\nドキュメントに書かれていないだけで機能が存在することはありうる。 特に API 経由の未文書化エンドポイント\n網羅走査した3社についても、検索インデックスやサイトマップが ドキュメント全体を反映していない可能性がある\n調査は 2026-07-19 の一時点のスナップショットである。 実際、dbt Core 1.12 の GA（2026-07-16）と expression_language.md の追加（2026-07-15）は調査の数日前であり、 もう数日早く調べていれば違う結論になっていた箇所がある",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>調査方法と範囲</span>"
+    ]
+  },
+  {
+    "objectID": "appendix/method.html#再調査時の注意",
+    "href": "appendix/method.html#再調査時の注意",
+    "title": "付録 A — 調査方法と範囲",
+    "section": "A.4 再調査時の注意",
+    "text": "A.4 再調査時の注意\n同種の調査を行う場合、以下の落とし穴に注意されたい。\n\n未認証の GitHub API は偽陰性を生む。 api.github.com/search/code は 未認証で 401 を返し、org-repos エンドポイントはレート制限にかかる。 どちらも「結果ゼロ」に見えるため、認証済みの gh コマンドを使うこと\nSEO 記事と製品ドキュメントは食い違うことがある。 本調査では、ある製品の SEO 記事が現在形で OSI 対応を謳う一方、 同社の製品ドキュメントには記載がないという事例に遭遇した（チャプター 6）\n社名を冠したディレクトリ名は所属を意味しない。 converters/orionbelt は BlackRock ではなく独立開発者の OBML、 converters/polaris はベンダー製品ではなく Apache Polaris である",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>調査方法と範囲</span>"
+    ]
+  },
+  {
+    "objectID": "appendix/method.html#動作確認の手順",
+    "href": "appendix/method.html#動作確認の手順",
+    "title": "付録 A — 調査方法と範囲",
+    "section": "A.5 動作確認の手順",
+    "text": "A.5 動作確認の手順\n次の順序で実施した。\n\n仕様を一次読解し、基礎文書として固定する（チャプター 4）\n基礎から検証計画を導く。 各項目について、主張・手順・裏付けとなる観測・ 反証となる観測を事前に定める\n計画に沿って動作確認する。計画外の観測は増やさない\n実装に投入する文書は、必ず公式バリデータを通してから使う\n\n4 の理由を補足する。仕様に適合しない文書を実装に読ませた場合、 実装がそれをどう扱おうと「実装の性質」としては解釈できない。 仕様準拠を先に保証しておかないと、観測されたものが 仕様由来か実装由来かを切り分けられなくなる。\n2 で反証条件を先に定めるのは、結論ありきの検証を避けるためである。 各項目の主張・反証条件・結果は第6章（チャプター 7）に示し、 実行結果の生データはリポジトリの docs/results/ に出力される。\n環境は Docker で固定し、仕様リポジトリはコミットを固定（07be0176）、 検証コンテナは外部ネットワークから切り離して実行した。 再現手順は 付録 B にある。",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>調査方法と範囲</span>"
+    ]
+  },
+  {
+    "objectID": "appendix/reproduce.html",
+    "href": "appendix/reproduce.html",
+    "title": "付録 B — 動作確認の再現手順",
+    "section": "",
+    "text": "B.1 必要なもの\n本レポートの チャプター 7 は、このリポジトリのルートにある環境で再現できる。\ndocker のみ。 Python も dbt もコンテナ内にある。",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>動作確認の再現手順</span>"
+    ]
+  },
+  {
+    "objectID": "appendix/reproduce.html#手順",
+    "href": "appendix/reproduce.html#手順",
+    "title": "付録 B — 動作確認の再現手順",
+    "section": "B.2 手順",
+    "text": "B.2 手順\ngit clone https://github.com/dobachi/ossie-playground.git\ncd ossie-playground\n\nmake spec     # 仕様リポジトリを固定コミットで取得（ここだけネットワークを使う）\nmake verify   # トラックA・Bを実行\n個別に実行する場合:\nmake verify-a   # トラックA (0.1.1) のみ\nmake verify-b   # トラックB (0.2.0.dev0) のみ。先に verify-a が必要\nmake shell      # コンテナ内でシェルを開く\n検証結果は docs/results/*.json に出力される。",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>動作確認の再現手順</span>"
+    ]
+  },
+  {
+    "objectID": "appendix/reproduce.html#再現性の担保",
+    "href": "appendix/reproduce.html#再現性の担保",
+    "title": "付録 B — 動作確認の再現手順",
+    "section": "B.3 再現性の担保",
+    "text": "B.3 再現性の担保\n固定の粒度は要素ごとに異なる。強い順に挙げる。\n\n仕様リポジトリはコミットを固定している（Makefile の OSSIE_COMMIT = 07be0176）。 上流が変われば結果も変わりうるため、固定を外す場合は結果も取り直すこと\n消費側の主要パッケージは厳密固定。docker/requirements.txt で dbt-core==1.12.0 / dbt-duckdb==1.10.1 を == で指定している。 本レポートの結論に直結する版はここで固定される\n検証コンテナは外部ネットワークから切り離してある（network_mode: none）。 実行中に何かを取りに行かせないことで、結果を左右する要素を 固定コミットとビルド済みイメージだけに限定する。 外部を使うのは make spec の一度だけ\n\n\nB.3.1 固定していない部分（既知の限界）\n再現性は完全ではない。以下は固定していないため、再ビルドの時期によって動きうる。\n\nベースイメージをダイジェスト固定していない。 docker/Dockerfile は FROM python:3.12-slim とタグ指定のみで、@sha256:... を付けていない\n一部の依存はバージョン下限指定（&gt;=）。jsonschema / sqlglot / PyYAML / hatchling / jinja2、および dbt-core 経由で入る metricflow などは、 ロックファイルで固定していないため、解決される版がビルド時期に依存する\n\n厳密な追試が必要な場合は、上記をダイジェスト固定・ロックファイル化したうえで 再取得することを勧める。本レポートの中核的な観測（バージョン文字列による排除、 ルート dialects の不整合、集約関数の脱落）は、 == 固定した dbt-core 1.12.0 と固定コミットの仕様に依存しており、 下位依存の版差では変わりにくい部分である。",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>動作確認の再現手順</span>"
+    ]
+  },
+  {
+    "objectID": "appendix/reproduce.html#構成",
+    "href": "appendix/reproduce.html#構成",
+    "title": "付録 B — 動作確認の再現手順",
+    "section": "B.4 構成",
+    "text": "B.4 構成\ndocker/          コンテナ定義と依存\ncompose.yaml     network_mode: none で実行\nMakefile         入口\nscripts/\n  lib_ossie.py       共通処理（バリデータの展開など）\n  verify_track_a.py  トラックA\n  verify_track_b.py  トラックB\ntrack-a/\n  dbt-project/   検証用の最小 dbt プロジェクト（DuckDB）\n  osi/           手書きの 0.1.1 準拠文書\ntrack-b/\n  generated/     公式コンバータの生成物（実行時に作られる）\nspec/            仕様リポジトリ（make spec で取得。git 管理外）\nreport/          本レポート（Quarto）",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>動作確認の再現手順</span>"
+    ]
+  },
+  {
+    "objectID": "appendix/reproduce.html#実装上の注意",
+    "href": "appendix/reproduce.html#実装上の注意",
+    "title": "付録 B — 動作確認の再現手順",
+    "section": "B.5 実装上の注意",
+    "text": "B.5 実装上の注意\nバリデータの挙動がバージョンで違う。 osi-0.1.1-rc1 タグの validate.py には --schema オプションがなく、 __file__.parent.parent / \"core-spec\" を決め打ちで読む。 scripts/lib_ossie.py はその構造を再現している。\nコンバータは PyPI にない。 spec/python（apache-ossie）と spec/converters/dbt（ossie_dbt）は 公開されていないため、リポジトリからソース導入している。 オフラインで導入できるよう、ビルドバックエンド（hatchling）を イメージに含めてある。",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>動作確認の再現手順</span>"
+    ]
+  },
+  {
+    "objectID": "appendix/reproduce.html#本レポートのビルド",
+    "href": "appendix/reproduce.html#本レポートのビルド",
+    "title": "付録 B — 動作確認の再現手順",
+    "section": "B.6 本レポートのビルド",
+    "text": "B.6 本レポートのビルド\ncd report\nquarto preview   # ローカルで閲覧\nquarto render    # _site/ へ出力\n図版は report/diagrams/*.mmd（Mermaid ソース）から mmdc で PNG 化している。",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>動作確認の再現手順</span>"
+    ]
+  },
+  {
+    "objectID": "appendix/resources.html",
+    "href": "appendix/resources.html",
+    "title": "付録 C — 情報源一覧",
+    "section": "",
+    "text": "C.1 Tier 1 — ASF 公式・仕様リポジトリ\n信頼性の階層と、否定的結論の扱いについては 付録 A を参照。\nいずれもアクセス日 2026-07-19。",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>C</span>  <span class='chapter-title'>情報源一覧</span>"
+    ]
+  },
+  {
+    "objectID": "appendix/resources.html#tier-1-asf-公式仕様リポジトリ",
+    "href": "appendix/resources.html#tier-1-asf-公式仕様リポジトリ",
+    "title": "付録 C — 情報源一覧",
+    "section": "",
+    "text": "情報源\nURL\n用途\n\n\n\n\n仕様リポジトリ\nhttps://github.com/apache/ossie\n仕様本体・コンバータ・バリデータ\n\n\n固定コミット\n07be0176e48af67f0b46e0957a87a154586abf38\n本調査が参照した時点\n\n\n比較タグ\nosi-0.1.1-rc1\nリリース版 0.1.1 の内容\n\n\n旧リポジトリ\nhttps://github.com/open-semantic-interchange/OSI\n移管前の履歴。バージョン変遷の追跡に使用\n\n\nIncubator ステータス\nhttps://incubator.apache.org/projects/ossie.html\npodling 情報、mentors、入り日\n\n\nIncubator Clutch\nhttps://incubator.apache.org/clutch/ossie.html\nリリース有無、卒業条件の充足状況\n\n\nIncubation Proposal\nhttps://cwiki.apache.org/confluence/display/INCUBATOR/OssieProposal\nPPMC 構成、Known Risks\n\n\ndev@ アーカイブ\nhttps://lists.apache.org/list.html?dev@ossie.apache.org\npodling 運営の実態\n\n\ngeneral@incubator アーカイブ\nhttps://lists.apache.org/list.html?general@incubator.apache.org\n受入投票のスレッド\n\n\ndist 配布領域\nhttps://dist.apache.org/repos/dist/release/incubator/\nApache Release の有無\n\n\nJune 2026 board report\nhttps://cwiki.apache.org/confluence/display/INCUBATOR/June2026\n初回レポート時期の確認",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>C</span>  <span class='chapter-title'>情報源一覧</span>"
+    ]
+  },
+  {
+    "objectID": "appendix/resources.html#tier-2-プロジェクト広報",
+    "href": "appendix/resources.html#tier-2-プロジェクト広報",
+    "title": "付録 C — 情報源一覧",
+    "section": "C.2 Tier 2 — プロジェクト広報",
+    "text": "C.2 Tier 2 — プロジェクト広報\nASF インフラ上だが PPMC 自身の広報文であり、主張として扱う。\n\n\n\n情報源\nURL\n\n\n\n\n公式サイト\nhttps://ossie.apache.org/\n\n\nIncubator 入りアナウンス\nhttps://ossie.apache.org/updates/ossie-enters-apache-incubator/\n\n\n旧公式サイト\nhttps://open-semantic-interchange.org/",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>C</span>  <span class='chapter-title'>情報源一覧</span>"
+    ]
+  },
+  {
+    "objectID": "appendix/resources.html#tier-3-ベンダー発信業界メディア",
+    "href": "appendix/resources.html#tier-3-ベンダー発信業界メディア",
+    "title": "付録 C — 情報源一覧",
+    "section": "C.3 Tier 3 — ベンダー発信・業界メディア",
+    "text": "C.3 Tier 3 — ベンダー発信・業界メディア\n事実関係は Tier 1 で裏を取る。単独では根拠としない。\n\n\n\n情報源\nURL\n\n\n\n\nSnowflake（仕様確定告知）\nhttps://www.snowflake.com/en/blog/open-semantic-interchanges-specs-finalized/\n\n\nSnowflake（パートナー拡大）\nhttps://www.snowflake.com/en/blog/osi-initiative-expands-partners/\n\n\nSnowflake（Incubator 入り）\nhttps://www.snowflake.com/en/blog/apache-ossie-open-semantic-interchange-incubator/\n\n\nDremio\nhttps://www.dremio.com/blog/apache-ossie-incubating-the-new-name-for-open-semantic-interchange/\n\n\nDatabricks\nhttps://www.databricks.com/blog/redefining-semantics-data-layer-future-bi-and-ai\n\n\nSalesforce\nhttps://www.salesforce.com/blog/ending-semantic-drift-unified-business-logic-foundation/",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>C</span>  <span class='chapter-title'>情報源一覧</span>"
+    ]
+  },
+  {
+    "objectID": "appendix/resources.html#消費側実装のドキュメント",
+    "href": "appendix/resources.html#消費側実装のドキュメント",
+    "title": "付録 C — 情報源一覧",
+    "section": "C.4 消費側実装のドキュメント",
+    "text": "C.4 消費側実装のドキュメント\n\n\n\n情報源\nURL\n\n\n\n\ndbt: OSI semantic models\nhttps://docs.getdbt.com/docs/build/osi-semantic-models\n\n\ndbt: osi-paths\nhttps://docs.getdbt.com/reference/project-configs/osi-paths\n\n\n\nベンダー各社の製品ドキュメントについては 付録 A に一覧がある。",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>C</span>  <span class='chapter-title'>情報源一覧</span>"
+    ]
+  },
+  {
+    "objectID": "appendix/resources.html#関連リポジトリ",
+    "href": "appendix/resources.html#関連リポジトリ",
+    "title": "付録 C — 情報源一覧",
+    "section": "C.5 関連リポジトリ",
+    "text": "C.5 関連リポジトリ\n\n\n\n情報源\nURL\n\n\n\n\nApache Polaris\nhttps://github.com/apache/polaris\n\n\nUnity Catalog OSS\nhttps://github.com/unitycatalog/unitycatalog\n\n\nApache Superset\nhttps://github.com/apache/superset",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>C</span>  <span class='chapter-title'>情報源一覧</span>"
+    ]
+  },
+  {
+    "objectID": "appendix/resources.html#本調査の成果物",
+    "href": "appendix/resources.html#本調査の成果物",
+    "title": "付録 C — 情報源一覧",
+    "section": "C.6 本調査の成果物",
+    "text": "C.6 本調査の成果物\n\n\n\n情報源\nURL\n\n\n\n\n検証環境\nhttps://github.com/dobachi/ossie-playground\n\n\n既発の関連記事\nhttps://dobachi.github.io/memo-blog/2026/07/10/Open-Semantic-Interchange-technical-deep-dive/",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>C</span>  <span class='chapter-title'>情報源一覧</span>"
+    ]
+  }
+]
