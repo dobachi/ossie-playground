@@ -132,7 +132,7 @@ dev@ossie.apache.org のメッセージ総数は **28通**（2026-07-19 時点�
 リスト開設は 2026-06-26、実質的な最初の投稿は 2026-07-08。
 **稼働してまだ約2週間**である。
 
-[^mlstats]: `lists.apache.org` の統計 API（`stats.lua?list=dev&domain=ossie.apache.org&d=lte=3M`）による。アクセス日 2026-07-19。スレッド一覧は @sec-note-asf-governance に転記した
+[^mlstats]: `lists.apache.org` の統計 API（`stats.lua?list=dev&domain=ossie.apache.org&d=lte=3M`）による。アクセス日 2026-07-19。個々のスレッドは同アーカイブから辿れる
 
 立っているスレッドは、アナウンス、運営提案、参加表明、技術議論、
 そして GitHub Discussions からの転送に分かれる。

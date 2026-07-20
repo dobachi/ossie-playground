@@ -12,11 +12,13 @@
 | 実装 | 方向 | 状態 | 出典 |
 | --- | --- | --- | --- |
 | dbt Core 1.12 | import + export | 2026-07-16 GA | [dbt docs](https://docs.getdbt.com/docs/build/osi-semantic-models) |
-| Honeydew | import のみ | 有償・要問い合わせ | @sec-note-implementations |
+| Honeydew | import のみ | 有償・要問い合わせ[^honeydew] |
 
 [^orgs]: Apache Ossie, "[Apache Ossie (Incubating): The New Name for Open Semantic Interchange](https://ossie.apache.org/updates/ossie-enters-apache-incubator/)", アクセス日 2026-07-19。創設17社から50社超へ拡大した旨の記載による。
 
-いずれもアクセス日 2026-07-19。各社の詳細な調査結果は @sec-note-implementations にある。
+いずれもアクセス日 2026-07-19。各社ごとの確認手段と参照文献は @sec-method に整理してある。
+
+[^honeydew]: Honeydew は有償製品で、対応の詳細は要問い合わせ。公開ドキュメント上では import 方向の対応が確認できた。アクセス日 2026-07-19
 
 ### リポジトリ内のコンバータ8本は実装ではない
 
@@ -99,8 +101,8 @@ Atlan・Alation・Select Star はいずれもローンチパートナーとし�
   **「Snowflake Cortex Analyst specification」準拠**と明記[^ss-docs]
 
 [^atlan-ces]: Atlan, "[Deploy to Snowflake（Context Engineering Studio）](https://docs.atlan.com/product/capabilities/governance/context-engineering-studio/how-tos/deploy-snowflake)", アクセス日 2026-07-19
-[^alation-rel]: Alation の2026年リリースノート（`docs.alation.com/en/latest/releases/releasenotes/`）より。詳細は @sec-note-alation-selectstar
-[^ss-docs]: Select Star, "[Semantic Models](https://docs.selectstar.com/)" のドキュメント全文より。詳細は @sec-note-alation-selectstar
+[^alation-rel]: Alation の2026年リリースノート（`docs.alation.com/en/latest/releases/releasenotes/`）より。走査の範囲は @sec-method
+[^ss-docs]: Select Star, "[Semantic Models](https://docs.selectstar.com/)" のドキュメント全文より。走査の範囲は @sec-method
 
 3社とも、接続先は Snowflake の semantic view または Cortex Analyst であり、
 ベンダー中立の交換形式を介してはいない。

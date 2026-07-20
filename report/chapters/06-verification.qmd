@@ -6,8 +6,8 @@
 [ossie-playground](https://github.com/dobachi/ossie-playground) のルートにあり、
 `make verify` で追試できる（@sec-reproduce）。
 実行結果の生データは `docs/results/track_a.json` / `track_b.json` に出力される。
-検証項目ごとの主張と反証条件は @sec-note-verification-plan、
-詳細な観測記録は @sec-note-verification-results にある。
+検証項目ごとの主張と反証条件は本章で順に示す。
+実行結果の生データはリポジトリの `docs/results/track_a.json` / `track_b.json` に出力される。
 
 ## 検証の設計
 
@@ -33,7 +33,7 @@
 
 ### 運用ルール
 
-@sec-note-verification-plan に検証計画を先に固定し、
+検証計画を先に固定し、
 各項目について**主張・手順・裏付けとなる観測・反証となる観測**を事前に書いた。
 
 特に重要なルールが1つある。
@@ -299,7 +299,7 @@ metrics:
 寛容なパースは設計判断としてありうる。
 しかし警告が一切出ないため、**利用者は仕様違反に気づけない**。
 
-この項目の主張と反証条件は @sec-note-verification-plan に記載してある。
+この項目の主張と反証条件も、他と同様に事前に定めてある。
 
 ## 仕様が定めていない前提
 

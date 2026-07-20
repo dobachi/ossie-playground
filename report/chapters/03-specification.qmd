@@ -443,6 +443,31 @@ Snowflake・Databricks・PostgreSQL・BigQuery に広く実装されているこ
 RelationalAI の (Py)Rel と Goldman Sachs の Legend を挙げている。
 @sec-what-is-ossie で触れた2つの系譜が、ここでも参照されている。
 
+### オントロジー層の言語は ORM 系である {#sec-ontology-language}
+
+オントロジー層そのものは別ファイル `ontology/ontology.md` で定義されている[^ontospec]。
+その設計は、BI 系のセマンティックモデルとも、RDF/OWL の狭義オントロジーとも異なる、
+**Object-Role Modeling（ORM）系**である。根拠は次のとおり。
+
+[^ontospec]: Apache Ossie, "[core-spec/ontology/ontology.md](https://github.com/apache/ossie/blob/07be0176e48af67f0b46e0957a87a154586abf38/ontology/ontology.md)"（`version: 0.2.0.dev0`）。コミット `07be0176`（2026-07-17）時点。アクセス日 2026-07-20
+
+- **関係は n 項**である。`relationship` は "relate objects of **one or more** concepts"
+  と定義され、`OneToOne` は "only for binary relationships" と但し書きされる。
+  二項に限らない関係を前提にしている
+- **role（役割名）**を第一級で扱う。各関係は `roles` を持ち、
+  概念は「その関係で最初の role を演じる」形で関係を束ねる
+- **verbalizes（自然言語化）が必須**。関係には
+  `verbalizes: [ '{Person} is identified by {SocialSecurityNr}' ]` のように、
+  リンクを自然言語で言い表すパターンを付ける
+
+n 項関係・role・verbalizes を核に据える設計は、ORM / NIAM（fact-based modeling）の
+系譜そのものである。RelationalAI の (Py)Rel が同系統であることとも符合する。
+
+つまり Ossie は、**論理層（次元的なセマンティックモデル）と
+オントロジー層（ORM 系）という、由来の異なる2つのモデリング伝統を
+1つの仕様の中で接ごうとしている**。@sec-what-is-ossie の
+「オントロジーの語には幅がある」で触れた論点の、仕様側の裏づけである。
+
 ### 集約関数の分解可能性分類
 
 技術的に最も興味深いのはこの部分である。集約関数を4つに分類する。

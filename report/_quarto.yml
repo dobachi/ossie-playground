@@ -28,18 +28,6 @@ book:
     - appendix/method.qmd
     - appendix/reproduce.qmd
     - appendix/resources.qmd
-    - appendix/notes.qmd
-    - notes/2026-07-19-initial-survey.qmd
-    - notes/2026-07-19-spec-foundation.qmd
-    - notes/2026-07-19-verification-plan.qmd
-    - notes/2026-07-19-verification-results.qmd
-    - notes/2026-07-19-wg-history.qmd
-    - notes/2026-07-19-asf-governance.qmd
-    - notes/2026-07-19-roadmap-technical.qmd
-    - notes/2026-07-19-polaris-catalog.qmd
-    - notes/2026-07-19-implementations.qmd
-    - notes/2026-07-19-atlan-supplement.qmd
-    - notes/2026-07-19-alation-selectstar-supplement.qmd
 
   page-footer:
     left: "調査日 2026-07-19"

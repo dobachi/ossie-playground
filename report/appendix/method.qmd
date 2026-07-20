@@ -39,8 +39,7 @@ Alation は2026年のリリースノート3本（528 KB / 323 KB / 534 KB）も�
 Select Star は `llms.txt`、`changelog.md`、`features/semantic-models.md`、
 および 2.5 MB の過去 changelog も確認した。
 
-参照した主な URL は各社の補遺ノート
-（@sec-note-atlan、@sec-note-alation-selectstar）に列挙してある。
+参照した主な URL は本節の表と、第5章の各脚注に示したとおりである。
 
 ### 関連ページを個別に確認した5社
 
@@ -142,8 +141,8 @@ Superset については「マージ済みだが未リリース」「OSI 対応�
 
 次の順序で実施した。
 
-1. **仕様を一次読解し、基礎文書として固定する**（@sec-note-spec-foundation）
-2. **基礎から検証計画を導く**（@sec-note-verification-plan）。
+1. **仕様を一次読解し、基礎文書として固定する**（@sec-spec）
+2. **基礎から検証計画を導く**。
    各項目について、主張・手順・裏付けとなる観測・
    **反証となる観測**を事前に定める
 3. **計画に沿って動作確認する**。計画外の観測は増やさない
@@ -155,8 +154,8 @@ Superset については「マージ済みだが未リリース」「OSI 対応�
 仕様由来か実装由来かを切り分けられなくなる。
 
 2 で反証条件を先に定めるのは、結論ありきの検証を避けるためである。
-実際にどう定めたかは @sec-note-verification-plan、
-結果は @sec-note-verification-results にある。
+各項目の主張・反証条件・結果は第6章（@sec-verification）に示し、
+実行結果の生データはリポジトリの `docs/results/` に出力される。
 
 環境は Docker で固定し、仕様リポジトリはコミットを固定（`07be0176`）、
 検証コンテナは外部ネットワークから切り離して実行した。
