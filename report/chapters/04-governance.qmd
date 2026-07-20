@@ -18,11 +18,22 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| Incubator 入り | 2026年6月22日 |
-| Champion | JB Onofré（Dremio） |
+| Incubator 入り | 2026年6月（ASF 資料で日付が揺れる。後述） |
+| Champion | JB Onofré（proposal 記載時は Dremio） |
 | Mentors | JB Onofré / Holden Karau / Zili Chen / Russell Spitzer |
-| 初期コミッター | 14名（公称） |
+| 初期コミッター（proposal の候補） | 14名（PPMC 5＋committer 9。実際に権限を持つ人数は別。後述） |
 | リポジトリ | `apache/ossie`（作成は 2025-11-18） |
+
+::: {.callout-note}
+## 入り日は ASF 資料内でも揺れている
+
+Incubator 入りの日付は一次資料の中でも一致しない。Clutch のステータスは
+`Started: 2026-06-19` とする一方、同じ Clutch の News 欄は
+`2026-06-22 Project enters incubation.` とする[^startdate]。本レポートでは
+おおむね **2026年6月下旬** として扱い、日付そのものを論拠にはしない。
+
+[^startdate]: Apache Incubator, "[Clutch: ossie](https://incubator.apache.org/clutch/ossie.html)"（"Started: 2026-06-19" と "2026-06-22 Project enters incubation." が併存）、アクセス日 2026-07-21
+:::
 
 受入手続きは正規に踏まれている。
 
@@ -33,7 +44,7 @@
 投票結果は **binding +1 が6票**（Tison, PJ Fanning, Russell Spitzer, Markus Weimer,
 JB Onofré, Larry McCay）、non-binding +1 が2票。
 
-### 受入時のレビューで指摘が1件
+### 受入時のレビューで、確認できたライセンス指摘が1件
 
 投票の議論中、IPMC メンバーの PJ Fanning がライセンスの件を指摘している[^ccby]。
 
@@ -52,8 +63,10 @@ CC-BY コンテンツをソース形式で含めることへの制限を説明�
 対応は同日中に行われた。Russell Spitzer が
 **PR #157「Relicense Documentation to ASF 2.0」**を起票し、
 2026-06-16 19:19 UTC にマージされている[^pr157]。
-PR 本文は「この変更は OSI / Ossie の Apache Incubator 受入投票の際に
-提起されたライセンス上の懸念を解消するものである」と明記する。
+PR 本文は、この変更が受入投票で提起されたライセンス上の懸念に対応するものだと述べる。
+ただし PR のマージが示すのは**表示上のライセンス変更**であって、
+権利処理や全著作者の同意といった IP clearance 全体の完了までは、これだけでは確認できない。
+投票スレッド上では、この後に追加の異議は確認していない。
 
 [^pr157]: open-semantic-interchange/OSI, "[PR #157: Relicense Documentation to ASF 2.0](https://github.com/open-semantic-interchange/OSI/pull/157)", merged 2026-06-16。アクセス日 2026-07-19
 

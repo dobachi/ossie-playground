@@ -1,24 +1,41 @@
 # エコシステムの現状 {#sec-ecosystem}
 
 「参加50社超」という数字が独り歩きしている。
-本章では、それが実装状況としてどこまで裏付けられるかを調べる。
+本章では、それが実装状況としてどこまで裏付けられるかを、2026-07-19 時点で調べる。
+
+::: {.callout-note}
+## 本章の数値はスナップショットである
+
+参加社数・実装状況・各種の日付は、この分野では短期間で動く。
+以下は **2026-07-19 時点**の確認にもとづく。GitHub の状態を指す箇所は
+コミットや PR 番号を併記し、変わりうる値であることを明示する。
+:::
 
 ## 参加と実装の落差
 
-![参加と実装の落差](../diagrams/04-adoption-gap.png){#fig-adoption-gap}
+参加組織は50社を超える[^orgs]。一方、それを製品として使える状態にした実装は、
+**成熟度に大きな幅がある**。「対応を表明した」ことと「今すぐ使える」ことは別なので、
+段階を分けて数える。
 
-参加組織は50社を超えるが[^orgs]、**製品として動く実装は2件**である。
+| 段階 | 意味 | 該当（2026-07-19 時点で確認できたもの） |
+| --- | --- | --- |
+| GA | 一般提供 | dbt Core 1.12（import + export、2026-07-16 GA。※変換に制約あり）[^dbt] |
+| Open Preview | 出荷済みだがプレビュー | Snowflake（semantic view ↔ OSI YAML、2026年6月導入）[^sf] |
+| 有償・限定提供 | 公開情報が乏しい | Honeydew（import 方向、要問い合わせ）[^honeydew] |
+| 表明・重点領域 | 出荷は未確認 | Salesforce/Tableau（OSI を co-lead、双方向交換を重点）[^sfdc]、Databricks（"OSI ready" と表明）[^dbx-summit] |
 
-| 実装 | 方向 | 状態 | 出典 |
-| --- | --- | --- | --- |
-| dbt Core 1.12 | import + export | 2026-07-16 GA | [dbt docs](https://docs.getdbt.com/docs/build/osi-semantic-models) |
-| Honeydew | import のみ | 有償・要問い合わせ[^honeydew] |
+![参加と実装の落差（2026-07-19 時点）](../diagrams/04-adoption-gap.png){#fig-adoption-gap}
 
-[^orgs]: Apache Ossie, "[Apache Ossie (Incubating): The New Name for Open Semantic Interchange](https://ossie.apache.org/updates/ossie-enters-apache-incubator/)", アクセス日 2026-07-19。創設17社から50社超へ拡大した旨の記載による。
+**今すぐ本番で使える実装は依然として少ない。** GA は dbt Core 1.12 の1件、
+Snowflake は Open Preview（後述)にとどまる。
+「参加50社」と「実際に動くもの」の落差は大きいが、
+その落差は成熟度の段階に分けて測る必要がある。
 
-いずれもアクセス日 2026-07-19。各社ごとの確認手段と参照文献は @sec-method に整理してある。
+[^orgs]: Apache Ossie, "[Apache Ossie (Incubating): The New Name for Open Semantic Interchange](https://ossie.apache.org/updates/ossie-enters-apache-incubator/)", アクセス日 2026-07-19。創設17社から50社超へ拡大した旨の記載による。「参加」は coalition の自己申告的な集計であり、実装企業数ではない。
+[^dbt]: [dbt docs: OSI semantic models](https://docs.getdbt.com/docs/build/osi-semantic-models)、アクセス日 2026-07-19。1.12.0 は 2026-07-16 公開（[PyPI](https://pypi.org/project/dbt-core/)）。export は未対応構文を落として警告する制約がある。
+[^honeydew]: Honeydew は有償製品で、対応の詳細は要問い合わせ。公開ドキュメントからは import 方向・提供形態・対応バージョンを十分に裏付けられなかった。アクセス日 2026-07-19
 
-[^honeydew]: Honeydew は有償製品で、対応の詳細は要問い合わせ。公開ドキュメント上では import 方向の対応が確認できた。アクセス日 2026-07-19
+各段階の確認手段と参照文献は @sec-method に整理してある。
 
 ### リポジトリ内のコンバータ8本は実装ではない
 
@@ -38,45 +55,45 @@
 
 [^obml]: 正典は [ralfbecher/orionbelt-semantic-layer](https://github.com/ralfbecher/orionbelt-semantic-layer)、PyPI パッケージ名は `orionbelt-semantic-layer`。アクセス日 2026-07-19
 
-### 主要ベンダーの製品対応は確認できなかった
+### 主要ベンダーの状況
 
-Snowflake・Databricks・Dremio・Cube・Salesforce/Tableau については、
-**調べた範囲で OSI / Ossie の製品対応を確認できなかった**。
+主要ベンダーを OSI 対応の観点で個別に見ると、出荷段階に差がある。
 
-::: {.callout-important}
-## 「確認できなかった」であって「存在しない」ではない
-
-これは不在の証明であり、本質的に弱い主張である。
-参照した文献と調査範囲は @sec-method に列挙した。読者が追試できるようにしてある。
-
-網羅性には差がある。カタログ製品3社（後述）はドキュメント全体を
-機械的に走査したため否定の確度が高いが、この5社は
-関連ページとリリースノートを個別に確認したにとどまる。
-NDA 下のプライベートプレビューは公開情報に現れない。
-:::
-
-確認できた範囲で言えることは以下のとおりである。
-
-- **Snowflake**: semantic views が実際に出荷している入出力は
-  独自 YAML と Tableau TDS（Preview、2026-03-05）であって、OSI ではない[^sf]
-- **Databricks**: 製品ドキュメント（metric views と YAML リファレンス）に OSI の記載はない[^dbx]。
-  一方、Data + AI Summit 2026 に合わせた自社ブログでは
-  metric views を "Open Semantic Interchange (OSI) ready"（OSI 対応の準備ができている）
-  と述べている[^dbx-summit]。**何をもって ready とするかは示されておらず**、
-  import / export の手順は文書化されていない
+- **Snowflake**: semantic view を OSI YAML として書き出す／OSI YAML から
+  semantic view を作る機能を **Open Preview** で提供している（2026年6月導入）。
+  公式の preview features に
+  「Open Semantic Interchange (OSI) YAML format for semantic views」として掲載され、
+  関数 `SYSTEM$CREATE_SEMANTIC_VIEW_FROM_OSI_YAML` が挙がっている[^sf]。
+  GA ではなく Open Preview である点に注意
+- **Salesforce / Tableau**: OSI を co-lead し、「metrics・dimensions・hierarchies・
+  relationships の双方向のメタデータ交換」を初期の重点に挙げている[^sfdc]。
+  ただし記述は将来形・方針表明が中心で、**出荷済みの製品機能としては確認できなかった**
+  （該当ヘルプページの本文は取得できず)。Ossie リポジトリには双方向変換器があるが、
+  jar は `0.1.0-SNAPSHOT` で、これ自体は製品機能ではない
+- **Databricks**: 製品ドキュメント（metric views と YAML リファレンス）に
+  OSI import/export の手順は確認できなかった[^dbx]。一方、Data + AI Summit 2026 の
+  自社ブログでは metric views を "Open Semantic Interchange (OSI) ready" と述べている[^dbx-summit]。
+  何をもって ready とするかは示されておらず、**互換機能の範囲と利用手順は未文書化**である
 - **Dremio**: Dremio Cloud の changelog（2025-11-12 〜 2026-07-14 の範囲）に該当なし。
   製品側の記載は確認できず、自社ブログで Ossie に言及するにとどまる[^dremio]
 - **Cube**: ブログで「オープンアダプタを提供する」と表明してから約10か月経つが、
   製品ドキュメントにも Ossie リポジトリにも成果物が見当たらない[^cube]
-- **Salesforce / Tableau**: Ossie リポジトリに双方向変換器が存在するが、
-  jar のバージョンは `0.1.0-SNAPSHOT` であり製品機能ではない[^sfdc]
 
-[^sf]: [semantic views overview](https://docs.snowflake.com/en/user-guide/views-semantic/overview) / [Tableau TDS 対応の release note（2026-03-05）](https://docs.snowflake.com/en/release-notes/2026/other/2026-03-05-semantic-views-tableau-tds)、アクセス日 2026-07-19
+::: {.callout-note}
+## 「確認できなかった」は不在の証明であって存在しないことの証明ではない
+
+上記の否定的な判定（Dremio・Cube・Databricks の import/export 未文書化など）は、
+調べた範囲での不在であって、本質的に弱い。参照文献と調査範囲は @sec-method に列挙した。
+公開情報でも、プレビュー機能などは掲載場所によって見つけにくいことがある。
+NDA 下のプライベートプレビューは公開情報に現れない。
+:::
+
+[^sf]: Snowflake, "[Preview features](https://docs.snowflake.com/en/release-notes/preview-features)"（"Open Semantic Interchange (OSI) YAML format for semantic views"、Open Preview、2026年6月）、アクセス日 2026-07-21。関数は [SQL functions index](https://docs.snowflake.com/en/sql-reference/functions-all) 参照
 [^dbx]: [metric views](https://docs.databricks.com/aws/en/business-semantics/metric-views) / [YAML reference](https://docs.databricks.com/aws/en/business-semantics/metric-views/yaml-reference)、アクセス日 2026-07-19
 [^dbx-summit]: Databricks, "[What's new with Unity Catalog at Data + AI Summit 2026](https://www.databricks.com/blog/whats-new-unity-catalog-data-ai-summit-2026)", アクセス日 2026-07-20。原文は "Metrics is also open: it's open source, available in Apache Spark and Unity Catalog OSS, and its Open Semantic Interchange (OSI) ready."。和訳は筆者による
 [^dremio]: [Dremio Cloud changelog](https://docs.dremio.com/dremio-cloud/changelog/) / [Dremio ブログ](https://www.dremio.com/blog/apache-ossie-incubating-the-new-name-for-open-semantic-interchange/)、アクセス日 2026-07-19
 [^cube]: [Cube: semantic layer sync](https://docs.cube.dev/docs/integrations/semantic-layer-sync)、アクセス日 2026-07-19
-[^sfdc]: [converters/salesforce](https://github.com/apache/ossie/tree/main/converters/salesforce)、アクセス日 2026-07-19
+[^sfdc]: Salesforce, "[Ending Semantic Drift](https://www.salesforce.com/blog/ending-semantic-drift-unified-business-logic-foundation/)" ほか。Tableau Semantics の重点として bi-directional metadata exchange を挙げる。Ossie リポジトリの [converters/salesforce](https://github.com/apache/ossie/tree/main/converters/salesforce)（jar `0.1.0-SNAPSHOT`）も参照。アクセス日 2026-07-21
 
 ## カタログ製品3社の状況
 
@@ -111,10 +128,19 @@ Atlan・Alation・Select Star はいずれもローンチパートナーとし�
 Snowflake は semantic view を実際に出荷しており、
 そこに接続すれば顧客の需要に今すぐ応えられる。
 一方 Ossie は @sec-situation で見たとおりリリース版すら固まっておらず、
-対応先として選びにくい。実装が2件にとどまっている理由も同じところにある。
+対応先として選びにくい。すぐ使える実装が乏しい理由も同じところにある。
 
-裏を返せば、**Ossie が解こうとしている「ツールをまたぐ相互運用」は、
-現場ではまだ個別対応で埋められている**という状況が読み取れる。
+ただし「市場は Snowflake 固有形式への個別対応だけ」と一般化はできない。
+反対材料として、Databricks は自社ブログで Atlan・Collibra・Monte Carlo・Domo・
+Hex・Omni などとの連携（出荷済み・計画中を含む)を挙げている[^dbx-partners]。
+Snowflake を軸にした個別対応が目立つのは確かだが、Databricks 側の
+セマンティック層を軸にした連携群も並行して存在する。
+
+そのうえで言えるのは、**Ossie が解こうとしている「ベンダー中立の交換形式を介した
+相互運用」は、現場ではまだ主流になっておらず、各ベンダー固有形式への
+個別対応が先行している**ということである。
+
+[^dbx-partners]: Databricks, "[Redefining Semantics](https://www.databricks.com/blog/redefining-semantics-data-layer-future-bi-and-ai)" の partner ecosystem 記載より。アクセス日 2026-07-21
 
 ### 発信の時制には幅がある
 
@@ -181,11 +207,15 @@ Preset は「Preset と Superset の双方で OSI 形式の export / import を
 一方は自社カタログの内側に作り込み、他方は中立仕様を格納する器として作る。
 前者は既に GA し、後者はまだ動いていない。
 
-Databricks の Unity Catalog Business Semantics は **2026-04-02 に GA** している。
+Databricks の Unity Catalog Business Semantics は **2026-04-02 に GA** している[^dbx-blog]。
+ただし GA は中核機能（metric views)についてで、materialization や UI authoring など
+一部は Preview である。「GA」を全機能一律と読まないほうがよい。
 
-- 中核は「metric views」[^dbx-blog]
+- 中核は「metric views」
 - metric view の実装を Apache Spark OSS へオープンソース化中（SPARK-54119）
-- Unity Catalog OSS にも `METRIC_VIEW` テーブル型がマージ済み[^uc-pr]
+- Unity Catalog OSS にも `METRIC_VIEW` テーブル型を追加する PR がマージ済み[^uc-pr]。
+  ただし**マージはコード上の進展であって、配布リリースへの収録とは別**。
+  4/2 発表時点では OSS への対応を "coming soon" としており、現配布版への収録は未確認
 
 [^dbx-blog]: Databricks, "[Redefining Semantics: The Data Layer for the Future of BI and AI](https://www.databricks.com/blog/redefining-semantics-data-layer-future-bi-and-ai)", アクセス日 2026-07-19
 [^uc-pr]: unitycatalog/unitycatalog, "[PR #1493: Add METRIC_VIEW table type](https://github.com/unitycatalog/unitycatalog/pull/1493)", アクセス日 2026-07-19
@@ -201,8 +231,8 @@ Unity Catalog Business Semantics は**単一ベンダーのセマンティック
 | | Unity Catalog | Polaris + Ossie |
 | --- | --- | --- |
 | 置き場所 | metric view を**テーブル型の一種**として既存カタログモデルに組み込む | Ossie 文書を**別エンティティ型**として持つ |
-| 状態 | **GA・実装済み**（2026-04-02） | エンドポイントは 501、フラグは default false |
-| 仕様の主体 | 自社仕様。後から OSI 互換を主張 | 最初から中立仕様を格納 |
+| 状態 | **GA**（2026-04-02、中核機能） | エンドポイントは 501、フラグは default false（固定コミット `07be0176` 時点。日次で変わりうる） |
+| 仕様の主体 | 自社仕様で先行出荷、OSI 対応も表明 | 最初から中立仕様を格納 |
 
 読み取れるのは**速度と中立性のトレードオフ**である。
 
@@ -233,6 +263,9 @@ Ossie と Apache Polaris の連携は、**API の形が決まっただけ**の�
 
 ### 構想・未実装のもの
 
+以下はいずれも 2026-07-19 時点（`apache/polaris` の当時の main）での確認であり、
+日次で変わりうる。
+
 - Polaris の semantic-models エンドポイントは**全メソッドが `501 Not Implemented`**
   （`SemanticModelCatalogAdapter.java` の javadoc に明記）
 - フィーチャーフラグ `ENABLE_SEMANTIC_MODELS` は default false
@@ -246,7 +279,7 @@ Ossie と Apache Polaris の連携は、**API の形が決まっただけ**の�
 
 ### 設計は理にかなっている
 
-実装は止まっているが、設計の考え方には見るべきものがある。
+エンドポイントは未実装（後述）だが、設計の考え方には見るべきものがある。
 
 **Polaris は Ossie 文書の中身を読まない。**
 `{version, semantic_model}` という JSON 文字列を、
