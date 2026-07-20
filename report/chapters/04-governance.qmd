@@ -103,8 +103,9 @@ incubation 入りから4日で主要インフラが揃っている。
 ### Apache Release はゼロ
 
 @sec-situation で述べたとおり、**Apache Release は1本も出ていない**。
-Clutch ページは "No releases" かつ **"No PGP Signing Keys"** を示す。
-署名鍵が未登録である以上、直近でリリースが出る状態にもない。
+Clutch ページは "No releases" かつ **"No PGP Signing Keys"** を示す（収集日 2026-07-07 UTC 表示）。
+署名鍵はリリース準備の中で登録できるので「鍵がない＝直近で出せない」とまでは言えないが、
+少なくとも公開リリースへ向けた外形的な準備の痕跡は、現時点で確認できない。
 
 dev@ のアーカイブにも、リリース計画に関する議論は見当たらなかった[^norelplan]。
 
@@ -112,30 +113,45 @@ dev@ のアーカイブにも、リリース計画に関する議論は見当た
 
 ### 卒業までの距離
 
-incubation 入りが 2026-06-22 という月末だったため、
-**2026年6月の [Incubator board report](https://cwiki.apache.org/confluence/display/INCUBATOR/June2026) に Ossie は含まれていない**
-（対象は Auron, BifroMQ, Caldera, Casbin, Iggy, KIE, OpenServerless, Otava,
-OzHera, PouchDB の10 podling）。
+新規 podling は、**最初の3か月は毎月、その後は四半期ごとに報告する**義務がある[^cadence]。
+Ossie は6月下旬に受け入れられたため、この月次報告の対象になる。
 
-レポーティング周期は March / June / September / December であるから、
-**初回の podling report は 2026年9月**。
-2026-07-19 時点で ASF に提出済みのステータスレポートは存在しない。
+[^cadence]: Apache Incubator, "[Incubation Policy — Podling Reporting](https://incubator.apache.org/policy/incubation.html)"（"Podlings SHALL report monthly for their first three months, after that quarterly."）、アクセス日 2026-07-21
 
-Clutch が挙げる未充足項目は次のとおり。
+実際の状況を追うと、**2026年7月の Incubator report で Ossie は
+「新規 podling」として記載されるにとどまり、詳細報告は提出していない**[^julyreport]。
+受入が直近すぎたためで、"failed to report" 扱いでもない。
+最初の実質的なステータス報告は、通常なら8月の月次報告になる。
+
+[^julyreport]: Apache Incubator, "[July 2026 report](https://cwiki.apache.org/confluence/display/INCUBATOR/July2026)"（"A new podling, Ossie … was accepted into the Incubator"。詳細報告のあった podling は Caldera, Casbin, Fluss, PonyMail, ResilientDB）、アクセス日 2026-07-21
+
+したがって「初回報告まで何もない」のではなく、**今後の月次報告が
+最初の外部評価の機会**になる。8月・9月の報告に、mentor の応答性・
+PPMC の自己評価・リリース計画が現れるかを見るのが有効である。
+
+Clutch が挙げる未充足項目は次のとおり[^clutch]。
 
 - ドキュメント用 wiki の未整備
 - podling website の未整備（`ossie.apache.org` は稼働しているが、
   Clutch の基準を満たしていないと判定されている。理由は未確認）
 - **release distribution area の未設定**
 
-ASF の卒業要件は、コミュニティの多様性、ASF 流の意思決定の定着、
-**最低1回以上の Apache Release**、IP clearance の完了、
-mentor による "ready to graduate" 判断である。
+[^clutch]: Apache Incubator, "[Clutch: ossie](https://incubator.apache.org/clutch/ossie.html)"、収集日 2026-07-07 UTC 表示。アクセス日 2026-07-21
 
-Ossie は **Apache Release ゼロ・初回レポート未提出・ML 稼働2週間**という段階であり、
-卒業は少なくとも数回のレポートサイクル先になる。
-ASF podling の一般的な incubation 期間は1〜2年程度で、
-Ossie がそれより早く抜ける材料は現時点で見当たらない。
+卒業の判断は、固定した期間や報告回数で決まるものではなく、
+コミュニティの多様性、ASF 流の意思決定の定着、
+**Apache Release を作成・公開できる能力の実証**、IP clearance の完了、
+そして最終的にコミュニティ投票・IPMC の推薦・理事会の承認による[^grad]。
+
+[^grad]: Apache Incubator, "[Guide to Successful Graduation](https://incubator.apache.org/guides/graduation.html)" / "[Release Management](https://incubator.apache.org/guides/releasemanagement.html)"。アクセス日 2026-07-21
+
+現時点の Ossie は、Apache Release がなく（@sec-situation）、
+release distribution area も未設定で、ML 上で追跡できる合意・投票の実績も乏しい。
+**卒業の時期は予測できない**が、少なくとも現状は
+リリース能力・意思決定の定着といった実績がまだ積み上がっていない段階である。
+参考までに、ASF は典型的な incubation 期間を約1.5年としている[^incperiod]。
+
+[^incperiod]: Apache Incubator, "[トップページ](https://incubator.apache.org/)"。アクセス日 2026-07-21
 
 ## 意思決定はどこで行われているか {#sec-governance-decisions}
 
@@ -192,7 +208,9 @@ ML では決めず、GitHub Discussions で議論し、
 実質的な決定は Slack と Google Docs にある——という構図になっている。
 
 ASF のガバナンスが提供する価値の中核は「決定過程が公開アーカイブに残ること」である。
-その部分が機能していない。
+その点で、ML 上に追跡できる合意・投票の実績はまだ乏しく、
+ASF 流のプロセスが定着したとは言いにくい。ただし ML への転送や
+公開 GitHub Discussion は使われており、完全に機能していないわけではない。
 
 なお ML アーカイブ自体にも不備があり、プロジェクト側も Issue #193 で認識している。
 :::
@@ -212,7 +230,9 @@ incubation proposal では PPMC 5名と committer 9名に分かれており、
 | JB Onofré | Dremio |
 | Russell Spitzer | Snowflake |
 
-**PPMC 5名中2名（40%）が Snowflake** である。
+この **proposal 時点の PPMC 候補5名のうち2名が Snowflake** である。
+ただしこれは proposal の候補構成であって、現時点の PPMC 全体ではない
+（後述のとおり、実際に権限を持つ人数は Clutch 上4名にとどまる）。
 
 残り9名は proposal 上で所属が明示されていない。これ自体が透明性の観点で弱点になる。
 
@@ -297,32 +317,34 @@ proposal 本文のほうが現状を率直に記述している。**
 Clutch は committers 4名（全員 PPMC）と表示する一方、
 podling status page は14名を挙げる。
 
-ASF LDAP に @apache.org アカウントが実際に作成済みの人数が
-4名にとどまっている可能性が高い（Clutch は LDAP を参照する）。
-つまり14名は「予定された初期コミッター」であり、
-実際に commit 権限を持っているのはその一部という読みが自然である。
-ただし**この解釈は推定であり確定情報ではない**。
+Clutch が committers を4名と数える一方、status page は14名を挙げる。
+14名は proposal 上の「予定された初期コミッター」であり、
+実際に権限を持つのはその一部、という読みはできる。
+ただし Clutch の4名が正確に何を数えているか（LDAP アカウント作成済みか、
+実際の commit 権限保有者か)は一次資料から確定できない。**推定にとどまる**。
 
-## 移管は実装投資を加速させたか
+## 移管の前後で活動量は増えたか
 
-定量的にはイエスである。
+移管後に活動量は増えている。ただし変動値のスナップショットであり、
+移管が原因で加速したという因果までは、この数字だけでは言えない。
 
-| 指標 | 値 |
+以下は **2026-07-19 時点**の GitHub API の値である（日次で変わる）。
+
+| 指標 | 値（2026-07-19 時点） |
 | --- | --- |
 | merged PR 累計 | 68 |
-| **うち 2026-06-22 以降** | **32** |
-| 2026-06-22 以降の commit | 52 |
+| **うち 2026年6月下旬以降** | **32** |
+| 6月下旬以降の commit | 52 |
 | リポジトリ star | 1,342 |
 
 出典は GitHub API（`search/issues?q=repo:apache/ossie+type:pr+is:merged` および
-`repos/apache/ossie`）。アクセス日 2026-07-19。
+`repos/apache/ossie`）。アクセス日 2026-07-19。数値は集計方法（merge 方式・
+共同著者・メール統合)で変わりうる。移管日（6/19 か 6/22 か）で前後区分も動く。
 
-約7ヶ月（2025-11 〜 2026-06-22）で merged PR 36本に対し、
-ASF 入り後の約4週間で32本。月次換算で **5本/月 → 約32本/月**、6倍以上のペース上昇である。
+約7ヶ月（2025-11 〜 移管前）で merged PR 36本に対し、移管後の約4週間で32本。
+活動量が増えたのは確かだが、次の理由で「移管が加速させた」とは断定できない。
 
-ただし注意点が2つある。
-
-- 4週間という観測窓は短く、**アナウンス直後のご祝儀効果と持続的な加速を区別できない**
+- 4週間という観測窓は短く、**アナウンス直後の一時的な効果と持続的な傾向を区別できない**
 - ASF 移管に伴う機械的変更（LICENSE/NOTICE 追加、ヘッダ付与、CI 再構成、
   ライセンス変更作業）が PR 数を押し上げている可能性がある。**内訳は未確認**
 
@@ -334,8 +356,9 @@ ASF 入り後の約4週間で32本。月次換算で **5本/月 → 約32本/月
 「ベンダー中立になった」が妥当かは、宣言ではなく実績で判定すべきである。
 以下の3点が指標になる。
 
-1. **最初の仕様変更 VOTE で、Snowflake の提案が修正・却下される事例が出るか**
-2. **Snowflake 以外からの committer 昇格が起きるか**
+1. **仕様変更の VOTE で、所属に関係なく反対意見が検討され、
+   理由付きの合意が公開の場に記録されるか**
+2. **創設企業以外からの committer 昇格が起きるか**
 3. **初回 Apache Release を IPMC 投票で通せるか**
 
 いずれも 2026-07-19 時点では未達である。
