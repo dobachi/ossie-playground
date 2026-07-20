@@ -1,0 +1,22 @@
+flowchart TB
+    ML["<b>ASF が期待する場</b><br/><br/>dev@ メーリングリスト<br/>決定が公開アーカイブに残る<br/><i>If it didn't happen on the list,<br/>it didn't happen</i>"]:::expect
+
+    ML -.->|"[VOTE] は1本もなし<br/>[D] で転送されるだけ"| GH
+
+    subgraph ACTUAL["実際に議論・決定が起きている場"]
+        direction LR
+        GH["GitHub Discussions<br/>仕様の議論"]:::an
+        SL["Slack<br/>WG 運営"]:::an
+        GD["Google Docs<br/>中核の意味論<br/>（集約の再集約規則）"]:::an
+    end
+
+    GH --> R1
+    SL --> R1
+    GD --> R2
+    R1["決定過程が公開アーカイブに残らない"]:::risk
+    R2["議論が見つからず重複<br/>（Discussion #101 が #22 と重複）"]:::risk
+
+    classDef expect fill:#e8f0e8,stroke:#2d6a3f,stroke-width:2px
+    classDef an fill:#eef2f7,stroke:#5b6b7f
+    classDef risk fill:#fdf0f0,stroke:#c0392b,color:#8b0000
+    linkStyle 0 stroke:#c0392b,stroke-width:2px

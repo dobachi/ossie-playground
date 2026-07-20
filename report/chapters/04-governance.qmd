@@ -170,6 +170,8 @@ Apache リポジトリに存在しない。
 
 ワーキンググループも Slack チャンネル単位で運営されている（@sec-situation）。
 
+![ASF が決定の場として期待する ML と、実際に議論・決定が起きている場のずれ](../diagrams/07-decision-venues.png){#fig-decision-venues}
+
 ::: {.callout-warning}
 ## ASF に移管した意味が問われる部分
 
