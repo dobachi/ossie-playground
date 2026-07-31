@@ -13,6 +13,9 @@
 動作確認・ガバナンス・エコシステムの現状を、出典と再現手順つきでまとめている。
 `main` への push で自動ビルド・公開される（`.github/workflows/publish.yml`）。
 
+全文を1つにまとめた **PDF 版**もサイトのサイドバーからダウンロードできる
+（<https://dobachi.github.io/ossie-playground/apache-ossie-report.pdf>）。
+
 ## 何を確かめられるか
 
 2026年7月時点の Apache Ossie は、リリース版 `0.1.1` と開発版 `0.2.0.dev0` に
@@ -47,8 +50,13 @@
 
 ```bash
 cd report && quarto preview   # ローカルで閲覧
-cd report && quarto render    # _site/ へ出力
+cd report && quarto render    # _site/ へ HTML と PDF を出力
 ```
+
+PDF は `_quarto.yml` の `format: pdf` で組んでいる。lualatex + luatexja を使い、
+日本語フォントは Noto CJK を名指ししているため、ローカルで PDF まで出すには
+TeX Live（luatexja を含む）と `fonts-noto-cjk` が要る。HTML だけなら
+`quarto render --to html` で足りる。
 
 本文の各主張は、一次情報の脚注と、このリポジトリの再現データ
 （`docs/results/`, `make verify`）で裏づけている。

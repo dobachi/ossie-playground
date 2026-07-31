@@ -13,6 +13,9 @@ book:
   search: true
   page-navigation: true
   back-to-top-navigation: true
+  # サイドバー右上に PDF のダウンロードリンクを出す
+  downloads: [pdf]
+  output-file: "apache-ossie-report"
 
   chapters:
     - index.qmd
@@ -48,3 +51,41 @@ format:
     link-external-newwindow: true
     link-external-icon: true
     number-sections: true
+
+  # PDF は lualatex + luatexja で組む。日本語フォントは Noto CJK に固定してあり、
+  # CI 側で fonts-noto-cjk を入れておく必要がある（.github/workflows/publish.yml）。
+  pdf:
+    documentclass: scrreprt
+    classoption: [11pt]
+    pdf-engine: lualatex
+    lang: ja
+    mainfont: "Noto Serif CJK JP"
+    sansfont: "Noto Sans CJK JP"
+    monofont: "Noto Sans Mono CJK JP"
+    CJKmainfont: "Noto Serif CJK JP"
+    CJKsansfont: "Noto Sans CJK JP"
+    CJKmonofont: "Noto Sans Mono CJK JP"
+    CJKoptions:
+      - BoldFont=Noto Sans CJK JP Bold
+    geometry:
+      - top=25mm
+      - bottom=25mm
+      - left=22mm
+      - right=22mm
+    toc: true
+    toc-depth: 3
+    toc-title: 目次
+    number-sections: true
+    colorlinks: true
+    code-overflow: wrap
+    fig-align: center
+    fig-pos: "htbp"
+    include-in-header:
+      text: |
+        % 図が本文幅・ページ高さを超えないよう、全ての画像に上限を付ける。
+        % 画像に実寸が指定されると \setkeys{Gin} の既定値では効かないため、
+        % \includegraphics 自体を包んでいる。
+        \usepackage[export]{adjustbox}
+        \let\origincludegraphics\includegraphics
+        \renewcommand{\includegraphics}[2][]{%
+          \origincludegraphics[#1,max width=\linewidth,max totalheight=0.85\textheight,keepaspectratio]{#2}}

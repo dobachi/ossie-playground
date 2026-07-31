@@ -1,8 +1,9 @@
 name: Publish report
 
-# report/ 配下の Quarto ブックをビルドし、gh-pages ブランチへ公開する。
+# report/ 配下の Quarto ブックを HTML と PDF の両方でビルドし、gh-pages ブランチへ公開する。
 # .qmd は純粋な Markdown（コード実行なし）で、図は生成済み PNG を同梱しているため、
-# CI には Quarto のみが必要（Python/R ランタイムは不要）。
+# Python/R ランタイムは要らない。ただし PDF は lualatex + luatexja で組むので、
+# TeX（TinyTeX）と日本語フォント（Noto CJK）が要る。
 
 on:
   push:
@@ -22,8 +23,29 @@ jobs:
       - name: Check out
         uses: actions/checkout@v4
 
+      # _quarto.yml で Noto CJK を名指ししているため、無いと PDF の日本語が消える
+      - name: Install Japanese fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fonts-noto-cjk
+          fc-cache -f
+
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          tinytex: true
+
+      # 足りないパッケージは Quarto が描画中に自動で入れるが、
+      # 主要なものを先に入れて再試行の回数を減らす（名前違いは無視して先へ進む）
+      - name: Install LaTeX packages
+        run: |
+          tlmgr update --self || true
+          for pkg in luatexja adjustbox koma-script fontspec unicode-math geometry \
+                     caption float booktabs framed fancyvrb microtype parskip xurl \
+                     bookmark footnotehyper mdwtools subcaption tcolorbox environ \
+                     trimspaces pdfcol fontawesome5 upquote; do
+            tlmgr install "$pkg" || echo "skip: $pkg"
+          done
 
       - name: Render and publish to gh-pages
         uses: quarto-dev/quarto-actions/publish@v2
