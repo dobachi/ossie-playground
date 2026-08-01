@@ -6,16 +6,21 @@ book:
   title: "Apache Ossie 調査レポート"
   subtitle: "仕様と実装のあいだで何が起きているか"
   author: "dobachi"
-  date: "2026-07-19"
+  # 版（レポートを発行した日）。調査基準日 2026-07-19 とは別物で、そちらは index.qmd に書いてある。
+  # 版を上げるときはリポジトリ直下の VERSION を書き換えて scripts/set-version.sh を実行すること
+  # （このファイルの版を含む箇所をまとめて書き換える）。
+  date: "2026-07-21"
   description: "Apache Ossie（旧 Open Semantic Interchange）を一次情報と動作確認で調べた記録"
   site-url: "https://dobachi.github.io/ossie-playground/"
   repo-url: "https://github.com/dobachi/ossie-playground"
   search: true
   page-navigation: true
   back-to-top-navigation: true
-  # サイドバー右上に PDF のダウンロードリンクを出す
+  # サイドバー右上に PDF のダウンロードリンクを出す。
+  # 落ちてくるファイル名に版が入るよう、output-file にも版を含めている
+  # （downloads のリンク先はここから作られるので、リンクは自動で追従する）。
   downloads: [pdf]
-  output-file: "apache-ossie-report"
+  output-file: "apache-ossie-report-2026-07-21"
 
   chapters:
     - index.qmd
@@ -89,3 +94,11 @@ format:
         \let\origincludegraphics\includegraphics
         \renewcommand{\includegraphics}[2][]{%
           \origincludegraphics[#1,max width=\linewidth,max totalheight=0.85\textheight,keepaspectratio]{#2}}
+
+        % 紙に刷ったり切り出したりしても版が分かるよう、全ページのフッタに版を出す。
+        % scrreprt は KOMA なので fancyhdr ではなく scrlayer-scrpage を使う。
+        % 星付き（\cfoot* など）は plain（章扉）にも同時に効く。
+        \usepackage{scrlayer-scrpage}
+        \clearpairofpagestyles
+        \cfoot*{\pagemark}
+        \ofoot*{\footnotesize 版 2026-07-21}

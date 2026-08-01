@@ -10,6 +10,8 @@ on:
     branches: [main]
     paths:
       - 'report/**'
+      - 'VERSION'
+      - 'scripts/set-version.sh'
       - '.github/workflows/publish.yml'
   workflow_dispatch:
 
@@ -23,6 +25,11 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v4
+
+      # PDF のファイル名・表紙・フッタに入る版は VERSION が正。ここがずれたまま
+      # 公開すると、ファイル名と中身の版が食い違った PDF が出回るので先に止める。
+      - name: Check report version
+        run: scripts/set-version.sh --check
 
       # _quarto.yml で Noto CJK を名指ししているため、無いと PDF の日本語が消える
       - name: Install Japanese fonts

@@ -14,7 +14,8 @@
 `main` への push で自動ビルド・公開される（`.github/workflows/publish.yml`）。
 
 全文を1つにまとめた **PDF 版**もサイトのサイドバーからダウンロードできる
-（<https://dobachi.github.io/ossie-playground/apache-ossie-report.pdf>）。
+（<https://dobachi.github.io/ossie-playground/apache-ossie-report-2026-07-21.pdf>）。
+ファイル名・表紙・各ページのフッタに版（発行日）が入る。→ [レポートの版](#レポートの版)
 
 ## 何を確かめられるか
 
@@ -60,6 +61,26 @@ TeX Live（luatexja を含む）と `fonts-noto-cjk` が要る。HTML だけな�
 
 本文の各主張は、一次情報の脚注と、このリポジトリの再現データ
 （`docs/results/`, `make verify`）で裏づけている。
+
+### レポートの版
+
+レポートには日付形式の版を付けている。リポジトリ直下の `VERSION` が正で、
+PDF のファイル名（`apache-ossie-report-<版>.pdf`）・表紙の日付・全ページの
+フッタがこの値から作られる。手元に落とした PDF がいつ時点のものか、
+ファイル名だけで分かるようにするため。
+
+版は「レポートを発行した日」で、調査基準日（2026-07-19）とは別物。
+
+版を上げるときは:
+
+```bash
+vi VERSION                 # 新しい日付（YYYY-MM-DD）に書き換える
+scripts/set-version.sh     # report/_quarto.yml の3箇所へ反映する
+git add VERSION report/_quarto.yml
+```
+
+`VERSION` と `report/_quarto.yml` がずれたまま push すると、CI の
+`scripts/set-version.sh --check` が公開前に止める。
 
 ## 使い方
 
